@@ -1,0 +1,87 @@
+{% extends 'layout.html' %}
+
+{% block title %}管理員儀表板{% endblock %} {# 設定頁面標題 #}
+
+{% block content %}
+    {# 使用與 supervisor_dashboard 相同的容器樣式 #}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">管理員儀表板</h1> {# 頁面主標題 #}
+
+        {# 顯示歡迎訊息 #}
+        <div class="mb-6 text-center text-gray-700">
+            <p>歡迎，管理員 <strong>{{ current_user.username }}</strong>！</p> {# 顯示使用者名稱 #}
+            <p>作為管理員，您可以全面管理系統的使用者、學生和班級資料。</p> {# 管理員特有的說明 #}
+        </div>
+
+        {# 使用與 supervisor_dashboard 相同的網格佈局 #}
+        {# 調整 grid-cols 以適應更多的管理選項 #}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {# 使用者管理卡片 #}
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">使用者管理</h2>
+                <p class="mb-4">新增、編輯和刪除使用者帳號。</p>
+                <a href="{{ url_for('admin.manage_users') }}" class="text-blue-700 hover:text-blue-800 font-bold">
+                    前往使用者管理 &rarr;
+                </a>
+            </div>
+
+            {# 學生管理卡片 #}
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">學生管理</h2>
+                <p class="mb-4">新增、編輯和刪除學生資料。</p>
+                <a href="{{ url_for('admin.manage_students') }}" class="text-green-700 hover:text-green-800 font-bold">
+                    前往學生管理 &rarr;
+                </a>
+            </div>
+
+            {# 班級管理卡片 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">班級管理</h2>
+                <p class="mb-4">新增、編輯和刪除班級。</p>
+                <a href="{{ url_for('admin.manage_classes') }}" class="text-yellow-700 hover:text-yellow-800 font-bold">
+                    前往班級管理 &rarr;
+                </a>
+            </div>
+
+            {# 匯入使用者 CSV 卡片 #}
+            <div class="bg-purple-100 border-l-4 border-purple-500 text-purple-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">匯入使用者 (CSV)</h2>
+                <p class="mb-4">從 CSV 文件匯入使用者帳號。</p>
+                <a href="{{ url_for('admin.import_users_csv') }}" class="text-purple-700 hover:text-purple-800 font-bold">
+                    前往匯入頁面 &rarr;
+                </a>
+            </div>
+
+             {# 匯出使用者 CSV 卡片 #}
+            <div class="bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">匯出使用者 (CSV)</h2>
+                <p class="mb-4">匯出所有使用者帳號為 CSV 文件。</p>
+                <a href="{{ url_for('admin.export_users_csv') }}" class="text-indigo-700 hover:text-indigo-800 font-bold">
+                    前往匯出頁面 &rarr;
+                </a>
+            </div>
+
+             {# 匯入學生 CSV 卡片 #}
+            <div class="bg-pink-100 border-l-4 border-pink-500 text-pink-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">匯入學生 (CSV)</h2>
+                <p class="mb-4">從 CSV 文件匯入學生資料。</p>
+                <a href="{{ url_for('admin.import_students_csv') }}" class="text-pink-700 hover:text-pink-800 font-bold">
+                    前往匯入頁面 &rarr;
+                </a>
+            </div>
+
+             {# 匯出學生 CSV 卡片 #}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">匯出學生 (CSV)</h2>
+                <p class="mb-4">匯出所有學生資料為 CSV 文件。</p>
+                <a href="{{ url_for('admin.export_students_csv') }}" class="text-red-700 hover:text-red-800 font-bold">
+                    前往匯出頁面 &rarr;
+                </a>
+            </div>
+
+            {# 您可以根據需要添加更多管理員功能連結 #}
+
+        </div>
+    </div>
+{% endblock %}

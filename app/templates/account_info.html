@@ -1,0 +1,76 @@
+{% extends 'layout.html' %}
+
+{% block title %}帳號資料{% endblock %} {# 設定頁面標題為「帳號資料」 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md max-w-md"> {# 使用 max-w-md 限制最大寬度並居中 #}
+        <h1 class="text-2xl font-bold text-center mb-6">我的帳號資料</h1> {# 頁面主標題 #}
+
+        {# 帳號資料顯示區塊 #}
+        <div class="text-gray-700 space-y-4"> {# 添加間距 #}
+            {# 使用者名稱 #}
+            <div>
+                <strong class="block text-sm font-bold mb-1">使用者名稱:</strong>
+                {# 直接從 current_user 物件獲取 username #}
+                <span class="form-input-static">{{ current_user.username }}</span> {# 使用 form-input-static 樣式顯示靜態文本 #}
+            </div>
+
+            {# 角色 #}
+            <div>
+                <strong class="block text-sm font-bold mb-1">角色:</strong>
+                 <span class="form-input-static">
+                     {% if current_user.is_admin() %}管理員{% elif current_user.is_supervisor() %}主管{% elif current_user.is_teacher() %}教師{% else %}未知{% endif %}
+                 </span> {# 根據角色顯示中文名稱 #}
+            </div>
+
+            {# 教師姓名 - 僅對教師或主管顯示 #}
+            {% if current_user.teacher_name %} {# 檢查是否有教師姓名 #}
+                <div>
+                    <strong class="block text-sm font-bold mb-1">教師姓名:</strong>
+                    {# 直接從 current_user 物件獲取 teacher_name #}
+                    <span class="form-input-static">{{ current_user.teacher_name }}</span>
+                </div>
+            {% endif %}
+
+             {% if current_user.id_card_number %} {# 檢查是否有 ID 卡號碼 #}
+                <div>
+                    <strong class="block text-sm font-bold mb-1">ID 卡號碼:</strong>
+                    {# 直接從 current_user 物件獲取 id_card_number #}
+                    <span class="form-input-static">{{ current_user.id_card_number }}</span>
+                </div>
+             {% endif %}
+
+
+            {# 分配班級 - 僅對教師或主管顯示 #}
+            {% if current_user.is_teacher() or current_user.is_supervisor() %} {# 檢查是否是教師或主管 #}
+                 <div>
+                     <strong class="block text-sm font-bold mb-1">分配班級:</strong>
+                     {% if current_user.assigned_classes %} {# 檢查是否有分配班級 #}
+                         <ul class="list-disc list-inside ml-4 space-y-1"> {# 使用列表顯示班級名稱 #}
+                             {% for class in current_user.assigned_classes %}
+                                 {# 假設 assigned_classes 是一個包含 class_name 的列表或物件 #}
+                                 <li>{{ class.class_name if class.class_name else class['class_name'] }}</li>
+                             {% endfor %}
+                         </ul>
+                     {% else %} {# 如果沒有分配班級 #}
+                          <span class="form-input-static">無</span>
+                     {% endif %}
+                </div>
+                {% endif %}
+                <div class="mt-6 text-center">
+                    <a href="{{ url_for('main.change_password') }}"
+                        class="btn btn-primary inline-block px-6 py-2 text-sm font-medium leading-6 text-center text-white uppercase transition bg-blue-600 rounded shadow ripple hover:shadow-lg hover:bg-blue-700 focus:outline-none">
+                        修改密碼
+                    </a>
+                </div>
+        </div>
+
+        {# 返回儀表板按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回使用者儀表板 #}
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">
+                返回儀表板
+            </a>
+        </div>
+    </div>
+{% endblock %}

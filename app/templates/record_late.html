@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+
+{% block title %}記錄 {{ student.name }} 遲到{% endblock %} {# 設定頁面標題，使用學生的名字 #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">記錄 {{ student.name }} 的遲到</h1> {# 頁面主標題，顯示學生的名字 #}
+
+        <div class="mb-6 text-center text-gray-700">
+            {% if student %} {# 檢查學生資料是否存在 #}
+                <p>學生姓名: <strong>{{ student.name }}</strong></p>
+                {# 假設 student 物件中包含 class_name #}
+                <p>班級: <strong>{{ student.class_name if student.class_name else 'N/A' }}</strong></p>
+                {% if student.student_number %} {# 如果有學號則顯示 #}
+                    <p>學號: <strong>{{ student.student_number }}</strong></p>
+                {% endif %}
+            {% else %} {# 如果找不到學生資料則顯示錯誤訊息 #}
+                <p class="text-red-500">無法載入學生資訊。</p>
+            {% endif %}
+        </div>
+
+        {# 遲到記錄表單 #}
+        <form method="POST"> {# 表單提交方法為 POST #}
+            {{ form.hidden_tag() }} {# 包含 Flask-WTF 自動生成的 CSRF token，用於安全防護 #}
+
+            {# 遲到日期欄位 #}
+            <div class="form-group mb-4">
+                {{ form.late_date.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染欄位標籤 #}
+                {{ form.late_date(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }} {# 渲染日期輸入框 #}
+                {% for error in form.late_date.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {# 原因/備註欄位 #}
+            <div class="form-group mb-6">
+                {{ form.reason.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染欄位標籤 #}
+                {{ form.reason(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入原因或備註 (可選)") }} {# 渲染文本區域輸入框 #}
+                {% for error in form.reason.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {# 提交按鈕 #}
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline") }} {# 渲染提交按鈕 #}
+            </div>
+        </form>
+
+        {# 返回按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回學生的記錄查看頁面 #}
+            {% if student %} {# 確保學生資料存在才能生成返回鏈接 #}
+                <a href="{{ url_for('main.view_records', student_id=student.student_id) }}" class="btn btn-secondary">
+                    返回 {{ student.name }} 的記錄
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'layout.html' %}
+
+{% block title %}所有班級{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">所有班級</h1>
+
+        {# Display flashed messages #}
+        {# 顯示閃現訊息 #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} p-3 rounded-md mb-2 text-sm">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {# Check if there are any classes #}
+        {# 檢查是否有班級 #}
+        {% if classes %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200 rounded-md">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">班級名稱</th>
+                            <th class="py-3 px-6 text-left">導師</th> {# Teacher column #}
+                            <th class="py-3 px-6 text-center">學生人數</th> {# Number of students column #}
+                            <th class="py-3 px-6 text-center">操作</th> {# Actions column #}
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        {# Loop through the classes list passed from Flask #}
+                        {# 遍歷從 Flask 傳來的班級列表 #}
+                        {% for class_item in classes %}
+                            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                                {# Assuming the class_item object (or dictionary) contains class_id, class_name, teacher_name, and student_count #}
+                                {# You will need to JOIN classes and users tables and count students in your Flask route #}
+                                <td class="py-3 px-6 text-left whitespace-nowrap">
+                                     {# Link to view students in this class #}
+                                     {# 連結到查看此班級學生的頁面 #}
+                                    <a href="{{ url_for('main.view_students_in_class', class_id=class_item.class_id) }}" class="text-blue-600 hover:underline">
+                                        {{ class_item.class_name }}
+                                    </a>
+                                </td>
+                                <td class="py-3 px-6 text-left">{{ class_item.teacher_name | default('未指定') }}</td> {# Display teacher's name #}
+                                <td class="py-3 px-6 text-center">{{ class_item.student_count | default(0) }}</td> {# Display number of students #}
+                                <td class="py-3 px-6 text-center">
+                                    <div class="flex item-center justify-center">
+                                        {# View Students button (optional, as class name is already a link) #}
+                                        {# 查看學生按鈕 (可選，因為班級名稱已是連結) #}
+                                        {# <a href="{{ url_for('main.view_students_in_class', class_id=class_item.class_id) }}" class="w-4 mr-2 transform hover:text-blue-500 hover:scale-110" title="查看學生">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </a> #}
+
+                                        {# Edit button #}
+                                        {# 修改按鈕 #}
+                                        <a href="{{ url_for('main.edit_class', class_id=class_item.class_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改班級">
+                                            {# You can use an icon here #}
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                            </svg>
+                                        </a>
+                                        {# Delete form (using POST method) #}
+                                        {# 刪除表單 (使用 POST 方法) #}
+                                        <form action="{{ url_for('main.delete_class', class_id=class_item.class_id) }}" method="POST" onsubmit="return confirm('確定要刪除這個班級嗎？');">
+                                            <button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110" title="刪除班級">
+                                                 {# You can use an icon here #}
+                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m14 0H5m2 0V5a2 2 0 012-2h6a2 2 0 012 2v2" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            {# Message when no classes are found #}
+            {# 沒有找到班級時顯示的訊息 #}
+            <p class="text-center text-gray-600">目前沒有班級記錄。</p>
+        {% endif %}
+
+        {# Return button #}
+        {# 返回按鈕 #}
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('main.dashboard') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                返回儀表板
+            </a>
+        </div>
+    </div>
+{% endblock %}

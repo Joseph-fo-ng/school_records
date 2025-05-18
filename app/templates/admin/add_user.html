@@ -1,0 +1,121 @@
+{% extends 'layout.html' %}
+
+{% block title %}新增使用者{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md max-w-md">
+        <h1 class="text-2xl font-bold text-center mb-6">新增使用者</h1>
+
+        {# Display flashed messages #}
+        {# 顯示閃現訊息 #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} p-3 rounded-md mb-2 text-sm">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {# User add form #}
+        {# 新增使用者表單 #}
+        <form method="POST" action="{{ url_for('admin.add_user') }}">
+            {{ form.csrf_token }} {# CSRF protection token #}
+
+            {# Username field #}
+            {# 使用者名稱欄位 #}
+            <div class="mb-4">
+                {{ form.username.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.username.errors %}
+                    <p class="text-red-500 text-xs italic">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {# Password field #}
+            {# 密碼欄位 #}
+            <div class="mb-4">
+                {{ form.password.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.password.errors %}
+                    <p class="text-red-500 text-xs italic">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {# Confirm Password field #}
+            {# 確認密碼欄位 #}
+            <div class="mb-4">
+                {{ form.confirm_password.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.confirm_password.errors %}
+                    <p class="text-red-500 text-xs italic">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {# Role field #}
+            {# 角色欄位 #}
+            <div class="mb-4">
+                {{ form.role.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.role(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.role.errors %}
+                    <p class="text-red-500 text-xs italic">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            {# Teacher Name field (Optional, depending on role) #}
+            {# 教師姓名欄位 (可選，取決於角色) #}
+            <div class="mb-4">
+                {{ form.teacher_name.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.teacher_name(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.teacher_name.errors %}
+                    <p class="text-red-500 text-xs italic">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+             {# ID Card Number field (Optional) #}
+             {# 身分證字號欄位 (可選) #}
+             <div class="mb-6">
+                 {{ form.id_card_number.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {{ form.id_card_number(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                 {% for error in form.id_card_number.errors %}
+                     <p class="text-red-500 text-xs italic">{{ error }}</p>
+                 {% endfor %}
+             </div>
+
+            {# Class Assignment Section #}
+            {# 班級指派區塊 #}
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">指派班級:</label>
+                {% if classes %}
+                    <div class="grid grid-cols-2 gap-2">
+                        {# Loop through the classes list passed from Flask #}
+                        {# 遍歷從 Flask 傳來的班級列表 #}
+                        {% for class_item in classes %}
+                            <div class="flex items-center">
+                                {# Use checkboxes for multiple class selection #}
+                                {# 使用 checkbox 進行多個班級選擇 #}
+                                <input type="checkbox" name="assigned_classes" value="{{ class_item.class_id }}" id="class_{{ class_item.class_id }}" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                                <label for="class_{{ class_item.class_id }}" class="ml-2 text-gray-700">{{ class_item.class_name }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-600 text-sm">目前沒有可用的班級。</p>
+                {% endif %}
+            </div>
+
+
+            {# Submit and Cancel buttons #}
+            {# 提交和取消按鈕 #}
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}
+                <a href="{{ url_for('admin.admin_dashboard') }}" class="inline-block align-baseline font-bold text-sm text-gray-500 hover:text-gray-800">
+                    取消
+                </a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

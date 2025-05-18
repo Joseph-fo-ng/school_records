@@ -1,0 +1,7 @@
+Flask
+mysql-connector-python
+Flask-Login
+Flask-WTF
+Werkzeug # Flask 依賴，但列出來更明確，尤其如果手動處理密碼或安全功能
+bcrypt # 用於安全地儲存密碼雜湊
+Flask-Moment

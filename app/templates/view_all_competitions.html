@@ -1,0 +1,103 @@
+{% extends 'layout.html' %}
+
+{% block title %}所有參賽記錄{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">所有參賽記錄</h1>
+
+        {# 顯示閃現訊息 #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} p-3 rounded-md mb-2 text-sm">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {# 檢查是否有參賽記錄 #}
+        {% if competitions %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200 rounded-md">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">學生姓名</th>
+                            <th class="py-3 px-6 text-left">班級</th> {# 新增班級欄位 #}
+                            <th class="py-3 px-6 text-left">比賽名稱</th>
+                            <th class="py-3 px-6 text-left">日期</th>
+                            <th class="py-3 px-6 text-left">結果/成就</th>
+                            <th class="py-3 px-6 text-center">證明文件</th>
+                            <th class="py-3 px-6 text-center">記錄時間</th> {# 新增記錄時間欄位 #}
+                            <th class="py-3 px-6 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        {# 遍歷從 Flask 傳來的 competitions 列表 #}
+                        {% for record in competitions %}
+                            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                                {# 假設 record 物件 (或字典) 包含 student_name 和 class_name #}
+                                {# 您需要在 Flask 路由中 JOIN students 和 classes 表來獲取這些資訊 #}
+                                <td class="py-3 px-6 text-left whitespace-nowrap">
+                                    {# 連結到學生的所有記錄頁面 #}
+                                    <a href="{{ url_for('main.view_records', student_id=record.student_id) }}" class="text-blue-600 hover:underline">
+                                        {{ record.student_name }}
+                                    </a>
+                                </td>
+                                <td class="py-3 px-6 text-left">{{ record.class_name }}</td> {# 顯示班級名稱 #}
+                                <td class="py-3 px-6 text-left">{{ record.competition_name | default('N/A') }}</td>
+                                <td class="py-3 px-6 text-left">{{ record.competition_date | default('N/A') }}</td>
+                                <td class="py-3 px-6 text-left">{{ record.result | default('N/A') }}</td>
+                                <td class="py-3 px-6 text-center">
+                                    {% if record.upload_path %}
+                                        {# 連結到證明文件 #}
+                                        <a href="{{ url_for('main.uploaded_file', filename=record.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">
+                                            查看文件
+                                        </a>
+                                    {% else %}
+                                        無
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-6 text-center">{{ record.recorded_at | default('N/A') }}</td> {# 顯示記錄時間 #}
+                                <td class="py-3 px-6 text-center">
+                                    <div class="flex item-center justify-center">
+                                        {# 修改按鈕 #}
+                                        <a href="{{ url_for('main.edit_competition', competition_id=record.competition_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改">
+                                            {# 您可以使用一個圖標，例如 Lucide Icons 或 Font Awesome #}
+                                            {# 例如： <i class="fas fa-edit"></i> #}
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                            </svg>
+                                        </a>
+                                        {# 刪除表單 (使用 POST 方法) #}
+                                        <form action="{{ url_for('main.delete_competition', competition_id=record.competition_id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆記錄嗎？');">
+                                            <button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110" title="刪除">
+                                                 {# 您可以使用一個圖標 #}
+                                                 {# 例如： <i class="fas fa-trash"></i> #}
+                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m14 0H5m2 0V5a2 2 0 012-2h6a2 2 0 012 2v2" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-center text-gray-600">目前沒有參賽記錄。</p>
+        {% endif %}
+
+        {# 返回按鈕 #}
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('main.dashboard') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                返回儀表板
+            </a>
+        </div>
+    </div>
+{% endblock %}

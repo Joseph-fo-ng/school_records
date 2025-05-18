@@ -1,0 +1,72 @@
+{% extends 'layout.html' %}
+
+{% block title %}管理使用者{% endblock %} {# 設定頁面標題為「管理使用者」 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">管理使用者帳號</h1> {# 頁面主標題 #}
+
+        {# 新增使用者按鈕 #}
+        <div class="mb-4 text-right">
+            {# 鏈接到新增使用者路由 #}
+            <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary inline-block">新增使用者</a>
+        </div>
+
+        {% if users %} {# 檢查使用者列表是否為空 #}
+            <div class="table-container"> {# 添加一個 div 容器以應用滾動條 #}
+                <table class="data-table"> {# 數據表格，方便響應式顯示 #}
+                    <thead>
+                        <tr>
+                            <th data-label="使用者名稱">使用者名稱</th>
+                            <th data-label="角色">角色</th>
+                            <th data-label="教師姓名">教師姓名</th> {# 新增欄位：教師姓名 #}
+                            <th data-label="ID卡號碼">ID卡號碼</th> {# 新增欄位：ID卡號碼 #}
+                            <th data-label="分配班級">分配班級</th> {# 顯示分配的班級 (僅教師) #}
+                            <th data-label="操作">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %} {# 循環顯示每個使用者 #}
+                            <tr>
+                                <td data-label="使用者名稱">{{ user.username }}</td>
+                                <td data-label="角色">{{ user.role }}</td>
+                                {# 顯示教師姓名，如果存在 #}
+                                <td data-label="教師姓名">{{ user.teacher_name if user.teacher_name else 'N/A' }}</td>
+                                {# 顯示 ID 卡號碼，如果存在 #}
+                                <td data-label="ID卡號碼">{{ user.id_card_number if user.id_card_number else 'N/A' }}</td>
+                                {# 顯示分配的班級名稱，如果存在 (假設 admin.manage_users 路由已將多個班級名稱合併為一個字串) #}
+                                <td data-label="分配班級">{{ user.assigned_class_names if user.assigned_class_names else 'N/A' }}</td>
+                                <td data-label="操作" class="flex flex-wrap gap-2"> {# 操作按鈕欄位，使用 flex 佈局和間距 #}
+                                    {# 修改使用者按鈕 #}
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.user_id) }}" class="btn btn-secondary btn-sm">修改</a>
+
+                                    {# 刪除使用者按鈕 - 使用一個包含刪除按鈕的小表單，以便使用 POST 方法刪除 #}
+                                    {# 避免刪除當前登入的管理員帳號 #}
+                                    {% if current_user.get_id() | int != user.user_id %} {# 將 current_user.get_id() 轉換為整數進行比較 #}
+                                        <form action="{{ url_for('admin.delete_user', user_id=user.user_id) }}" method="POST" onsubmit="return confirm('確定要刪除使用者 {{ user.username }} 嗎？');" class="inline-block">
+                                            <button type="submit" class="btn btn-danger btn-sm">刪除</button>
+                                        </form>
+                                    {% else %}
+                                        {# 如果是當前使用者，顯示無法刪除的提示 #}
+                                        <span class="text-gray-500 text-sm">無法刪除自己</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %} {# 結束使用者循環 #}
+                    </tbody>
+                </table>
+            </div>
+        {% else %} {# 如果使用者列表為空 #}
+            {# 顯示沒有使用者帳號的提示訊息 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p>目前沒有使用者帳號。</p>
+            </div>
+        {% endif %} {# 結束條件判斷 #}
+
+        {# 返回管理員儀表板按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回管理員儀表板路由 #}
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">返回管理員儀表板</a>
+        </div>
+    </div>
+{% endblock %}

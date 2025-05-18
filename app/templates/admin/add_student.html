@@ -1,0 +1,68 @@
+{% extends 'layout.html' %}
+
+{% block title %}新增學生{% endblock %} {# 設定頁面標題為「新增學生」 #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">新增學生資料</h1> {# 頁面主標題 #}
+
+        {# 確保表單使用 POST 方法 #}
+        <form method="POST">
+            {{ form.hidden_tag() }} {# Flask-WTF 自動生成的 CSRF token #}
+
+            <div class="form-group mb-4">
+                {{ form.student_number.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染班級內學號欄位標籤 #}
+                {{ form.student_number(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入班級內學號 (可選)") }} {# 渲染班級內學號輸入框 #}
+                {% for error in form.student_number.errors %} {# 顯示班級內學號驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.name.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染姓名欄位標籤 #}
+                {{ form.name(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入姓名") }} {# 渲染姓名輸入框 #}
+                 {% for error in form.name.errors %} {# 顯示姓名驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+             <div class="form-group mb-4">
+                {{ form.class_id.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染班級欄位標籤 #}
+                {# The choices for this SelectField will be populated in the route #}
+                {{ form.class_id(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }} {# 渲染班級選擇框 #}
+                {% for error in form.class_id.errors %} {# 顯示班級驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.id_card_number.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染 ID 卡號碼欄位標籤 #}
+                {{ form.id_card_number(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入學生ID卡號碼 (可選)") }} {# 渲染 ID 卡號碼輸入框 #}
+                {% for error in form.id_card_number.errors %} {# 顯示 ID 卡號碼驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.student_id_number.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染學生證號碼欄位標籤 #}
+                {{ form.student_id_number(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入學生證號碼 (可選)") }} {# 渲染學生證號碼輸入框 #}
+                {% for error in form.student_id_number.errors %} {# 顯示學生證號碼驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {# Initial counts (late_count, incomplete_homework_count, points) are handled in the database with default values or backend logic #}
+            {# No need to add fields for them in this form #}
+
+
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="新增學生") }} {# 渲染提交按鈕 #}
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            {# Link back to the manage students page #}
+            <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary">返回學生管理</a> {# 返回按鈕 #}
+        </div>
+    </div>
+{% endblock %}

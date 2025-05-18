@@ -1,0 +1,94 @@
+{% extends 'layout.html' %}
+
+{% block title %}修改獎懲記錄 - {{ award_punishment.name }}{% endblock %} {# Use award_punishment.name as student name #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">修改 {{ award_punishment.name }} 的獎懲記錄</h1> {# Use award_punishment.name #}
+
+        <div class="mb-6 text-center text-gray-700">
+            {% if award_punishment %}
+                <p>學生姓名: <strong>{{ award_punishment.name }}</strong></p> {# Use award_punishment.name #}
+                <p>班級: <strong>{{ award_punishment.class_name if award_punishment.class_name else 'N/A' }}</strong></p> {# Use award_punishment.class_name #}
+                {% if award_punishment.student_number %} {# Use award_punishment.student_number #}
+                    <p>學號: <strong>{{ award_punishment.student_number }}</strong></p>
+                {% endif %}
+            {% else %}
+                <p class="text-red-500">無法載入記錄資訊。</p>
+            {% endif %}
+        </div>
+
+        <form method="POST" enctype="multipart/form-data"> {# enctype="multipart/form-data" 是文件上傳必需的 #}
+            {{ form.hidden_tag() }} {# Flask-WTF 自動生成的 CSRF token #}
+
+            <div class="form-group mb-4">
+                {{ form.record_date.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {# Set the default value from the existing record #}
+                {{ form.record_date(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=award_punishment.record_date.strftime('%Y-%m-%d') if award_punishment and award_punishment.record_date else '') }}
+                {% for error in form.record_date.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.record_type.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# Set the default selected value from the existing record #}
+                {{ form.record_type(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", default=award_punishment.type if award_punishment else '') }}
+                {% for error in form.record_type.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.description.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# Set the default value from the existing record #}
+                {{ form.description(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=award_punishment.description if award_punishment else '') }}
+                {% for error in form.description.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-6">
+                 {{ form.proof.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+
+                 {# Display existing proof if available #}
+                 {% if award_punishment and award_punishment.upload_path %}
+                    <div class="mb-2">
+                        現有證明:
+                        <a href="{{ url_for('main.uploaded_file', filename=award_punishment.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">查看現有證明</a>
+                        {# Option to delete existing proof #}
+                        <div class="flex items-center mt-1">
+                             <input type="checkbox" name="delete_proof" id="delete_proof_award" class="mr-2 leading-tight"> {# Use unique ID #}
+                             <label for="delete_proof_award" class="text-sm text-gray-700">刪除現有證明</label> {# Use unique ID #}
+                        </div>
+                    </div>
+                 {% endif %}
+
+                 {# Use custom file upload area, needs static/js/script.js #}
+                 <div class="file-upload-area">
+                     <label for="{{ form.proof.id }}">選擇新的證明文件 (可選)</label>
+                     <p>或將文件拖放到此處</p>
+                     {{ form.proof(class="hidden") }} {# Hide the native file input #}
+                 </div>
+                 {% for error in form.proof.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                 {% endfor %}
+                 {# Optional: Add file preview area #}
+                 <div class="file-preview mt-2"></div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="更新記錄") }} {# Change button text #}
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            {# Link back to the student's records page #}
+            {% if award_punishment %}
+                <a href="{{ url_for('main.view_records', student_id=award_punishment.student_id) }}" class="btn btn-secondary">
+                    返回 {{ award_punishment.name }} 的記錄
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

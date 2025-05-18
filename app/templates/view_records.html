@@ -1,0 +1,346 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ student.name }} 的記錄{% endblock %} {# Set title dynamically using student name #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">查看 {{ student.name }} 的記錄</h1>
+
+        <div class="mb-8 text-center text-gray-700">
+            {% if student %}
+                <p>學生姓名: <strong>{{ student.name }}</strong></p>
+                <p>班級: <strong>{{ student.class_name if student.class_name else 'N/A' }}</strong></p>
+                {% if student.student_number %}
+                    <p>班級內學號: <strong>{{ student.student_number }}</strong></p> {# Updated label #}
+                {% endif %}
+                {# 新增顯示 ID 卡號碼和學生證號碼 #}
+                 {% if student.id_card_number %}
+                    <p>ID 卡號碼: <strong>{{ student.id_card_number }}</strong></p>
+                 {% endif %}
+                 {% if student.student_id_number %}
+                    <p>學生證號碼: <strong>{{ student.student_id_number }}</strong></p>
+                 {% endif %}
+
+                {# 顯示學生統計數據 #}
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+                    <div class="bg-gray-100 p-3 rounded-md">
+                        <strong class="block text-sm font-bold mb-1">總缺席節數:</strong>
+                        <p>{{ student.total_absences_sessions if student.total_absences_sessions is not none else 0 }}</p>
+                    </div>
+                     <div class="bg-gray-100 p-3 rounded-md">
+                        <strong class="block text-sm font-bold mb-1">總遲到次數:</strong>
+                        <p>{{ student.late_count if student.late_count is not none else 0 }}</p>
+                    </div>
+                     <div class="bg-gray-100 p-3 rounded-md">
+                        <strong class="block text-sm font-bold mb-1">總欠交功課次數:</strong>
+                        <p>{{ student.incomplete_homework_count if student.incomplete_homework_count is not none else 0 }}</p>
+                    </div>
+                     <div class="bg-gray-100 p-3 rounded-md">
+                        <strong class="block text-sm font-bold mb-1">總違規點數:</strong>
+                        <p class="text-red-600 font-bold">{{ student.violation_points if student.violation_points is not none else 0 }}</p>
+                    </div>
+                     <div class="bg-gray-100 p-3 rounded-md">
+                        <strong class="block text-sm font-bold mb-1">總獎勵點數:</strong>
+                        <p class="text-green-600 font-bold">{{ student.award_points if student.award_points is not none else 0 }}</p>
+                    </div>
+                </div>
+
+                {# 新增記錄按鈕 #}
+                <div class="mt-6 flex flex-wrap justify-center gap-4">
+                     <a href="{{ url_for('main.record_absence', student_id=student.student_id) }}" class="btn btn-secondary inline-block">
+                        記錄缺席
+                    </a>
+                    <a href="{{ url_for('main.record_award_punish', student_id=student.student_id) }}" class="btn btn-secondary inline-block">
+                        記錄獎懲
+                    </a>
+                    <a href="{{ url_for('main.record_competition', student_id=student.student_id) }}" class="btn btn-secondary inline-block">
+                        記錄參賽
+                    </a>
+                    {# 新增記錄遲到和欠交功課按鈕 #}
+                     <a href="{{ url_for('main.record_late', student_id=student.student_id) }}" class="btn btn-secondary inline-block">
+                        記錄遲到
+                    </a>
+                     <a href="{{ url_for('main.record_incomplete_homework', student_id=student.student_id) }}" class="btn btn-secondary inline-block">
+                        記錄欠交功課
+                    </a>
+                </div>
+
+
+            {% else %}
+                <p class="text-red-500">無法載入學生資訊。</p>
+            {% endif %}
+        </div>
+
+        {# --- 缺席記錄 --- #}
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">缺席記錄</h2>
+            {% if absences %}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-label="日期">日期</th>
+                                <th data-label="節數">節數</th>
+                                <th data-label="類型">類型</th>
+                                <th data-label="原因/備註">原因/備註</th>
+                                <th data-label="證明">證明</th>
+                                <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
+                                <th data-label="記錄時間">記錄時間</th>
+                                <th data-label="操作">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in absences %}
+                                <tr>
+                                    <td data-label="日期">{{ record.absence_date | format_date }}</td>
+                                    <td data-label="節數">{{ record.session_count }}</td>
+                                    <td data-label="類型">{{ record.type }}</td>
+                                    <td data-label="原因/備註">{{ record.reason if record.reason else 'N/A' }}</td>
+                                    <td data-label="證明">
+                                        {% if record.upload_path %}
+                                            <a href="{{ url_for('main.uploaded_file', filename=record.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">查看證明</a>
+                                        {% else %}
+                                            無
+                                        {% endif %}
+                                    </td>
+                                     {# Display recorder's teacher name #}
+                                    <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
+                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
+                                    <td data-label="操作">
+                                        {# Only allow editing by the user who recorded it, or by supervisor/admin #}
+                                        {# Ensure record.recorded_by_user_id is comparable to current_user.get_id() (both strings or both ints) #}
+                                        {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            <a href="{{ url_for('main.edit_absence', absence_id=record.absence_id) }}" class="btn btn-secondary btn-sm">修改</a>
+                                        {% else %}
+                                            無權修改
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p>該學生暫無缺席記錄。</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# --- 獎懲記錄 --- #}
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">獎懲記錄</h2>
+             {% if awards_punishments %}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-label="日期">日期</th>
+                                <th data-label="類型">類型</th>
+                                <th data-label="描述">描述</th>
+                                <th data-label="證明">證明</th>
+                                <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
+                                <th data-label="記錄時間">記錄時間</th>
+                                <th data-label="操作">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in awards_punishments %}
+                                <tr>
+                                    <td data-label="日期">{{ record.record_date | format_date }}</td>
+                                    <td data-label="類型">{{ record.type }}</td>
+                                    <td data-label="描述">{{ record.description }}</td>
+                                    <td data-label="證明">
+                                        {% if record.upload_path %}
+                                            <a href="{{ url_for('main.uploaded_file', filename=record.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">查看證明</a>
+                                        {% else %}
+                                            無
+                                        {% endif %}
+                                    </td>
+                                     {# Display recorder's teacher name #}
+                                    <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
+                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
+                                    <td data-label="操作">
+                                         {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            {# Corrected link to edit award/punishment record #}
+                                            <a href="{{ url_for('main.edit_award_punish', record_id=record.record_id) }}" class="btn btn-secondary btn-sm">修改</a>
+                                        {% else %}
+                                            無權修改
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p>該學生暫無獎懲記錄。</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# --- 參賽記錄 --- #}
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">參賽記錄</h2>
+             {% if competitions %}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-label="日期">日期</th>
+                                <th data-label="賽事名稱">賽事名稱</th>
+                                <th data-label="結果">結果</th>
+                                <th data-label="描述/備註">描述/備註</th>
+                                <th data-label="證明">證明</th>
+                                <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
+                                <th data-label="記錄時間">記錄時間</th>
+                                <th data-label="操作">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in competitions %}
+                                <tr>
+                                    <td data-label="日期">{{ record.comp_date | format_date }}</td>
+                                    <td data-label="賽事名稱">{{ record.comp_name }}</td>
+                                    <td data-label="結果">{{ record.result }}</td>
+                                    <td data-label="描述/備註">{{ record.description if record.description else 'N/A' }}</td>
+                                     <td data-label="證明">
+                                        {% if record.upload_path %}
+                                            <a href="{{ url_for('main.uploaded_file', filename=record.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">查看證明</a>
+                                        {% else %}
+                                            無
+                                        {% endif %}
+                                    </td>
+                                     {# Display recorder's teacher name #}
+                                    <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
+                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
+                                    <td data-label="操作">
+                                         {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            {# Corrected link to edit competition record #}
+                                            <a href="{{ url_for('main.edit_competition', comp_record_id=record.comp_record_id) }}" class="btn btn-secondary btn-sm">修改</a>
+                                        {% else %}
+                                            無權修改
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p>該學生暫無參賽記錄。</p>
+                </div>
+            {% endif %}
+        </div>
+
+        {# --- 遲到記錄 (新增) --- #}
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">遲到記錄</h2>
+             {% if late_records %} {# Assuming late_records list is passed from backend #}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-label="日期">日期</th>
+                                <th data-label="原因/備註">原因/備註</th>
+                                <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
+                                <th data-label="記錄時間">記錄時間</th>
+                                <th data-label="操作">操作</th> {# TODO: Add edit/delete for late records #}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in late_records %}
+                                <tr>
+                                    <td data-label="日期">{{ record.late_date | format_date }}</td>
+                                    <td data-label="原因/備註">{{ record.reason if record.reason else 'N/A' }}</td>
+                                    {# Display recorder's teacher name #}
+                                    <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available #}
+                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
+                                    <td data-label="操作">
+                                        {# Only allow editing by the user who recorded it, or by supervisor/admin #}
+                                        {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            {# TODO: Create main.edit_late route #}
+                                            <a href="#" class="btn btn-secondary btn-sm">修改</a> {# Placeholder link #}
+                                        {% else %}
+                                            無權修改
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p>該學生暫無遲到記錄。</p>
+                </div>
+            {% endif %}
+        </div>
+
+         {# --- 欠交功課記錄 (新增) --- #}
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-3">欠交功課記錄</h2>
+             {% if incomplete_homework_records %} {# Assuming incomplete_homework_records list is passed from backend #}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-label="日期">日期</th>
+                                <th data-label="科目">科目</th>
+                                <th data-label="描述/備註">描述/備註</th>
+                                <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
+                                <th data-label="記錄時間">記錄時間</th>
+                                <th data-label="操作">操作</th> {# TODO: Add edit/delete for incomplete homework records #}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in incomplete_homework_records %}
+                                <tr>
+                                    <td data-label="日期">{{ record.record_date | format_date }}</td>
+                                     <td data-label="科目">{{ record.subject if record.subject else 'N/A' }}</td>
+                                    <td data-label="描述/備註">{{ record.description if record.description else 'N/A' }}</td>
+                                    {# Display recorder's teacher name #}
+                                    <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available #}
+                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
+                                    <td data-label="操作">
+                                         {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            {# TODO: Create main.edit_incomplete_homework route #}
+                                            <a href="#" class="btn btn-secondary btn-sm">修改</a> {# Placeholder link #}
+                                        {% else %}
+                                            無權修改
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                 <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p>該學生暫無欠交功課記錄。</p>
+                </div>
+            {% endif %}
+        </div>
+
+
+        <div class="text-center mt-6">
+            {# Link back to the student list or dashboard based on user role #}
+            {% if current_user.is_teacher() and student %}
+                 {# Teachers go back to their class list #}
+                <a href="{{ url_for('main.student_list', class_id=student.class_id) }}" class="btn btn-secondary">
+                    返回 {{ student.class_name }} 班學生列表
+                </a>
+            {% else %}
+                {# Supervisors/Admins go back to dashboard or student management #}
+                 {# Linking to admin.manage_students might be more appropriate for admin/supervisor #}
+                 <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary">返回學生管理</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# The Jinja2 filters for date and datetime formatting are now implemented in app/__init__.py #}
+    {# The route for serving uploaded files ('main.uploaded_file') is implemented in app/main.py #}
+
+{% endblock %}

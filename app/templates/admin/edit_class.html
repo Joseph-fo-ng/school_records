@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+
+{% block title %}修改班級: {{ class_obj.class_name }}{% endblock %} {# 設定頁面標題，使用班級名稱 #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">修改班級: {{ class_obj.class_name }}</h1> {# 頁面主標題，顯示班級名稱 #}
+
+        {# 確保表單使用 POST 方法 #}
+        <form method="POST">
+            {{ form.hidden_tag() }} {# Flask-WTF 自動生成的 CSRF token #}
+
+            <div class="form-group mb-4">
+                {{ form.class_name.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染班級名稱欄位標籤 #}
+                {# 設定預設值為現有班級數據，驗證失敗後回退到表單數據 #}
+                {{ form.class_name(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入班級名稱 (例如: J1A)", value=form.class_name.data if form.class_name.data is not none else class_obj.class_name if class_obj else '') }}
+                {% for error in form.class_name.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="更新班級") }} {# 渲染提交按鈕，文字為「更新班級」 #}
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            {# Link back to the manage classes page #}
+            <a href="{{ url_for('admin.manage_classes') }}" class="btn btn-secondary">返回班級管理</a> {# 返回按鈕 #}
+        </div>
+    </div>
+{% endblock %}

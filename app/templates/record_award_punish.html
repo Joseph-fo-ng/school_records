@@ -1,0 +1,77 @@
+{% extends 'layout.html' %}
+
+{% block title %}記錄 {{ student.name }} 獎懲{% endblock %}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">記錄 {{ student.name }} 的獎懲</h1>
+
+        <div class="mb-6 text-center text-gray-700">
+            {% if student %}
+                <p>學生姓名: <strong>{{ student.name }}</strong></p>
+                <p>班級: <strong>{{ student.class_name if student.class_name else 'N/A' }}</strong></p> {# Assuming class_name is available in student object #}
+                {% if student.student_number %}
+                    <p>學號: <strong>{{ student.student_number }}</strong></p>
+                {% endif %}
+            {% else %}
+                <p class="text-red-500">無法載入學生資訊。</p>
+            {% endif %}
+        </div>
+
+        <form method="POST" enctype="multipart/form-data"> {# enctype="multipart/form-data" 是文件上傳必需的 #}
+            {{ form.hidden_tag() }} {# Flask-WTF 自動生成的 CSRF token #}
+
+            <div class="form-group mb-4">
+                {{ form.record_date.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.record_date(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.record_date.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.record_type.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.record_type(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.record_type.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.description.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {{ form.description(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                {% for error in form.description.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-6">
+                 {{ form.proof.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# 使用自定義文件上傳區域，需要配合 static/js/script.js #}
+                 <div class="file-upload-area">
+                     <label for="{{ form.proof.id }}">選擇文件</label>
+                     <p>或將文件拖放到此處</p>
+                     {{ form.proof(class="hidden") }} {# 隱藏原生的文件輸入框 #}
+                 </div>
+                 {% for error in form.proof.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                 {% endfor %}
+                 {# 這裡可以添加文件預覽區域 #}
+                 <div class="file-preview mt-2"></div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            {# Link back to the student's records page #}
+            {% if student %}
+                <a href="{{ url_for('main.view_records', student_id=student.student_id) }}" class="btn btn-secondary">
+                    返回 {{ student.name }} 的記錄
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

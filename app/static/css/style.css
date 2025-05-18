@@ -1,0 +1,343 @@
+/* static/css/style.css */
+
+/* 這裡可以添加您自己的全局樣式或覆蓋 Tailwind 的默認樣式 */
+
+/* 基本排版和鏈接樣式 */
+h1, h2, h3, h4, h5, h6 {
+    color: #1a202c; /* 深色標題 */
+    margin-bottom: 1rem;
+    font-weight: 600; /* Tailwind font-semibold */
+}
+
+a {
+    color: #3182ce; /* 藍色鏈接 */
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* 表單樣式 */
+.form-container {
+    background-color: #ffffff; /* 白色背景 */
+    padding: 1.5rem;
+    border-radius: 0.5rem; /* Tailwind rounded-md */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Tailwind shadow-md */
+    max-width: 600px; /* 最大寬度 */
+    margin: 2rem auto; /* 居中並添加上下邊距 */
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500; /* Tailwind font-medium */
+    color: #4a5568; /* 灰色文字 */
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="date"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #cbd5e0; /* 淺灰色邊框 */
+    border-radius: 0.25rem; /* Tailwind rounded */
+    box-sizing: border-box; /* 確保 padding 不影響寬度 */
+    font-size: 1rem;
+    color: #2d3748; /* 深灰色文字 */
+}
+
+.form-group input[type="file"] {
+    padding: 0.5rem 0; /* 文件輸入框的特殊處理 */
+}
+
+.form-group textarea {
+    min-height: 100px; /* 文本域最小高度 */
+    resize: vertical; /* 只允許垂直調整大小 */
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus,
+.form-group input[type="date"]:focus,
+.form-group input[type="number"]:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #4299e1; /* 藍色聚焦邊框 */
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5); /* 藍色聚焦陰影 */
+}
+
+.form-group .checkbox {
+    display: flex;
+    align-items: center;
+}
+
+.form-group .checkbox input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+/* 按鈕樣式 */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600; /* Tailwind font-semibold */
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 0.25rem; /* Tailwind rounded */
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+    color: #ffffff;
+    background-color: #4299e1; /* 藍色背景 */
+    border-color: #4299e1;
+}
+
+.btn-primary:hover {
+    background-color: #3182ce; /* 深藍色 */
+    border-color: #3182ce;
+}
+
+.btn-danger {
+    color: #ffffff;
+    background-color: #e53e3e; /* 紅色背景 */
+    border-color: #e53e3e;
+}
+
+.btn-danger:hover {
+    background-color: #c53030; /* 深紅色 */
+    border-color: #c53030;
+}
+
+.btn-secondary {
+    color: #2d3748;
+    background-color: #e2e8f0; /* 淺灰色背景 */
+    border-color: #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background-color: #cbd5e0; /* 中灰色 */
+    border-color: #cbd5e0;
+}
+
+/* 表格樣式 */
+.table-container {
+    margin-top: 1.5rem;
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow-x: auto; /* 處理表格過寬的情況 */
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse; /* 合併邊框 */
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0; /* 淺灰色底部邊框 */
+}
+
+.data-table th {
+    background-color: #f7fafc; /* 淺淺灰色背景 */
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase; /* 大寫標題 */
+    font-size: 0.875rem; /* Tailwind text-sm */
+}
+
+.data-table tbody tr:hover {
+    background-color: #ebf8ff; /* 懸停時淺藍色背景 */
+}
+
+/* 響應式表格 (簡單示例) */
+@media (max-width: 768px) {
+    .data-table thead {
+        display: none; /* 在小屏幕上隱藏表頭 */
+    }
+
+    .data-table, .data-table tbody, .data-table tr, .data-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table tr {
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.25rem;
+        background-color: #ffffff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-table td {
+        text-align: right;
+        padding-left: 50%; /* 為偽元素留出空間 */
+        position: relative;
+    }
+
+    .data-table td::before {
+        content: attr(data-label); /* 使用 data-label 屬性顯示標題 */
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-left: 0.75rem;
+        font-weight: 600;
+        color: #4a5568;
+        text-align: left;
+    }
+}
+
+
+/* 其他通用樣式 */
+.container {
+    width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+    padding-right: 1rem;
+    padding-left: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+}
+
+/* 消息閃現樣式 (已在 layout.html 的 style 標籤中定義，這裡作為備份或擴展) */
+/* .flash-messages { ... } */
+/* .flash-message { ... } */
+/* .flash-success { ... } */
+/* .flash-danger { ... } */
+/* .flash-info { ... } */
+/* .flash-warning { ... } */
+
+/* 文件上傳區域樣式 */
+.file-upload-area {
+    border: 2px dashed #cbd5e0;
+    border-radius: 0.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s ease-in-out;
+}
+
+.file-upload-area:hover {
+    border-color: #4299e1;
+}
+
+.file-upload-area input[type="file"] {
+    display: none; /* 隱藏原生的文件輸入框 */
+}
+
+.file-upload-area label {
+    cursor: pointer;
+    color: #4299e1;
+    font-weight: 600;
+}
+
+.file-upload-area p {
+    margin-top: 0.5rem;
+    color: #718096; /* 淺灰色文字 */
+}
+
+/* 文件預覽 (可選，需要 JS 配合) */
+.file-preview {
+    margin-top: 1rem;
+    /* 樣式化預覽圖片或文件名顯示 */
+}
+
+/* 權限不足提示樣式 */
+.permission-denied {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+    margin-top: 1.5rem;
+}
+
+/* 管理員面板鏈接樣式 */
+.admin-links {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.admin-links h2 {
+    margin-bottom: 1rem;
+    color: #1a202c;
+}
+
+.admin-links ul {
+    list-style: none;
+    padding: 0;
+}
+
+.admin-links li {
+    margin-bottom: 0.75rem;
+}
+
+.admin-links a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #edf2f7; /* 淺灰色背景 */
+    color: #2d3748;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.admin-links a:hover {
+    background-color: #e2e8f0; /* 中灰色 */
+    text-decoration: none;
+}
+
+/* 新增的 form-input-static 樣式 */
+.form-input-static {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #cbd5e0; /* 淺灰色邊框 */
+    border-radius: 0.25rem; /* Tailwind rounded */
+    box-sizing: border-box; /* 確保 padding 不影響寬度 */
+    font-size: 1rem;
+    color: #2d3748; /* 深灰色文字 */
+    background-color: #edf2f7; /* 淺灰色背景，表示不可編輯 */
+    cursor: default; /* 鼠標箭頭 */
+}

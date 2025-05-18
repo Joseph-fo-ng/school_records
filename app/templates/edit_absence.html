@@ -1,0 +1,103 @@
+{% extends 'layout.html' %}
+
+{% block title %}修改缺席記錄 - {{ absence.name }}{% endblock %} {# Use absence.name as student name #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">修改 {{ absence.name }} 的缺席記錄</h1> {# Use absence.name #}
+
+        <div class="mb-6 text-center text-gray-700">
+            {% if absence %}
+                <p>學生姓名: <strong>{{ absence.name }}</strong></p> {# Use absence.name #}
+                <p>班級: <strong>{{ absence.class_name if absence.class_name else 'N/A' }}</strong></p> {# Use absence.class_name #}
+                {% if absence.student_number %} {# Use absence.student_number #}
+                    <p>學號: <strong>{{ absence.student_number }}</strong></p>
+                {% endif %}
+            {% else %}
+                <p class="text-red-500">無法載入記錄資訊。</p>
+            {% endif %}
+        </div>
+
+        <form method="POST" enctype="multipart/form-data"> {# enctype="multipart/form-data" 是文件上傳必需的 #}
+            {{ form.hidden_tag() }} {# Flask-WTF 自動生成的 CSRF token #}
+
+            <div class="form-group mb-4">
+                {{ form.absence_date.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                {# Set the default value from the existing record #}
+                {{ form.absence_date(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=absence.absence_date.strftime('%Y-%m-%d') if absence and absence.absence_date else '') }}
+                {% for error in form.absence_date.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.session_count.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# Set the default value from the existing record #}
+                {{ form.session_count(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=absence.session_count if absence else '') }}
+                {% for error in form.session_count.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.absence_type.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# Set the default selected value from the existing record #}
+                {{ form.absence_type(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", default=absence.type if absence else '') }}
+                {% for error in form.absence_type.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-4">
+                {{ form.reason.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+                 {# Set the default value from the existing record #}
+                {{ form.reason(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=absence.reason if absence else '') }}
+                {% for error in form.reason.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="form-group mb-6">
+                 {{ form.proof.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+
+                 {# Display existing proof if available #}
+                 {% if absence and absence.upload_path %}
+                    <div class="mb-2">
+                        現有證明:
+                        <a href="{{ url_for('main.uploaded_file', filename=absence.upload_path) }}" target="_blank" class="text-blue-600 hover:underline">查看現有證明</a>
+                        {# Option to delete existing proof #}
+                        <div class="flex items-center mt-1">
+                             <input type="checkbox" name="delete_proof" id="delete_proof" class="mr-2 leading-tight">
+                             <label for="delete_proof" class="text-sm text-gray-700">刪除現有證明</label>
+                        </div>
+                    </div>
+                 {% endif %}
+
+                 {# Use custom file upload area, needs static/js/script.js #}
+                 <div class="file-upload-area">
+                     <label for="{{ form.proof.id }}">選擇新的證明文件 (可選)</label>
+                     <p>或將文件拖放到此處</p>
+                     {{ form.proof(class="hidden") }} {# Hide the native file input #}
+                 </div>
+                 {% for error in form.proof.errors %}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                 {% endfor %}
+                 {# Optional: Add file preview area #}
+                 <div class="file-preview mt-2"></div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="更新記錄") }} {# Change button text #}
+            </div>
+        </form>
+
+        <div class="text-center mt-6">
+            {# Link back to the student's records page #}
+            {% if absence %}
+                <a href="{{ url_for('main.view_records', student_id=absence.student_id) }}" class="btn btn-secondary">
+                    返回 {{ absence.name }} 的記錄
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
