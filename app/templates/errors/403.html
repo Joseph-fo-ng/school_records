@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+
+{% block title %}403 Forbidden{% endblock %}
+
+{% block content %}
+    <div class="text-center py-12">
+        <h1 class="text-6xl font-bold text-red-600 mb-4">403</h1>
+        <h2 class="text-3xl font-semibold text-gray-800 mb-4">禁止訪問 (Forbidden)</h2>
+        <p class="text-lg text-gray-600 mb-8">您沒有權限訪問此頁面。</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">返回儀表板</a>
+    </div>
+{% endblock %}

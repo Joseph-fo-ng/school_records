@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+
+{% block title %}首頁{% endblock %}
+
+{% block content %}
+    <div class="text-center py-12">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">歡迎來到學生記錄管理系統</h1>
+        <p class="text-lg text-gray-600 mb-8">請登入以管理學生記錄。</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">前往登入頁面</a>
+    </div>
+{% endblock %}

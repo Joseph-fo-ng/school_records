@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+
+{% block title %}管理班級{% endblock %} {# 設定頁面標題為「管理班級」 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">管理班級</h1> {# 頁面主標題 #}
+
+        {# 新增班級按鈕 #}
+        <div class="mb-4 text-right">
+            {# 鏈接到新增班級路由 #}
+            <a href="{{ url_for('admin.add_class') }}" class="btn btn-primary inline-block">新增班級</a>
+        </div>
+
+        {% if classes %} {# 檢查班級列表是否為空 #}
+            <div class="table-container"> {# 添加一個 div 容器以應用滾動條 #}
+                <table class="data-table"> {# 數據表格，方便響應式顯示 #}
+                    <thead>
+                        <tr>
+                            <th data-label="班級名稱">班級名稱</th>
+                            <th data-label="操作">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {# Loop through the list of classes passed from the backend #}
+                        {% for class in classes %}
+                            <tr>
+                                <td data-label="班級名稱">{{ class.class_name }}</td>
+                                <td data-label="操作" class="flex flex-wrap gap-2"> {# 操作按鈕欄位，使用 flex 佈局和間距 #}
+                                    {# Link to edit class - using class_id as the path parameter #}
+                                    <a href="{{ url_for('admin.edit_class', class_id=class.class_id) }}" class="btn btn-secondary btn-sm">修改</a>
+
+                                    {# Form to delete class - using a POST form for safety #}
+                                    {# Using class_id as the path parameter for the delete route #}
+                                    <form action="{{ url_for('admin.delete_class', class_id=class.class_id) }}" method="POST" onsubmit="return confirm('確定要刪除班級 {{ class.class_name }} 嗎？ 這將同時刪除該班級下的所有學生及相關記錄！');" class="inline-block">
+                                        <button type="submit" class="btn btn-danger btn-sm">刪除</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %} {# 結束班級循環 #}
+                    </tbody>
+                </table>
+            </div>
+        {% else %} {# 如果班級列表為空 #}
+            {# 顯示沒有班級資料的提示訊息 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p>目前沒有班級資料。</p>
+            </div>
+        {% endif %} {# 結束條件判斷 #}
+
+        {# 返回管理員儀表板按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回管理員儀表板路由 #}
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">返回管理員儀表板</a>
+        </div>
+    </div>
+{% endblock %}

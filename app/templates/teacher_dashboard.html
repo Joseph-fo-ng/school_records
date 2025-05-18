@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+
+{% block title %}教師儀表板{% endblock %}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">教師儀表板</h1>
+
+        {# Display a welcome message for the teacher #}
+        <div class="mb-6 text-center text-gray-700">
+            {# Assuming current_user object has a teacher_name attribute, fallback to username #}
+            <p>歡迎，教師 <strong>{{ current_user.teacher_name if current_user.teacher_name else current_user.username }}</strong>！</p>
+        </div>
+
+        {% if assigned_classes %} {# Check if the teacher has assigned classes (expecting a list) #}
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3">您負責的班級：</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> {# Use a grid for multiple classes #}
+                    {% for class in assigned_classes %} {# Loop through the list of assigned classes #}
+                        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="font-bold text-lg">{{ class.class_name }}</p>
+                                <p class="text-sm">查看學生名單並記錄相關事項。</p>
+                            </div>
+                            {# Link to view the student list for this specific class #}
+                            <a href="{{ url_for('main.student_list', class_id=class.class_id) }}" class="btn btn-primary btn-sm">
+                                查看學生列表
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm" role="alert">
+                <p class="font-bold">尚未分配班級</p>
+                <p>請聯繫管理員分配您負責的班級。</p>
+            </div>
+        {% endif %}
+
+        {# Account data and change password links are expected to be in the layout.html header #}
+
+    </div>
+{% endblock %}

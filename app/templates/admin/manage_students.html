@@ -1,0 +1,87 @@
+{% extends 'layout.html' %}
+
+{% block title %}管理學生{% endblock %} {# 設定頁面標題為「管理學生」 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">管理學生資料</h1> {# 頁面主標題 #}
+
+        {# Link to add a new student #}
+        <div class="mb-4 text-right">
+            {# 鏈接到新增學生路由 #}
+            <a href="{{ url_for('admin.add_student') }}" class="btn btn-primary inline-block">新增學生</a>
+        </div>
+
+        {% if students %} {# 檢查學生列表是否為空 #}
+            <div class="table-container"> {# 添加一個 div 容器以應用滾動條 #}
+                <table class="data-table"> {# 數據表格，方便響應式顯示 #}
+                    <thead>
+                        <tr>
+                            <th data-label="班級名稱">班級名稱</th>
+                            <th data-label="學號">學號</th>
+                            <th data-label="姓名">姓名</th>
+                            <th data-label="ID卡號碼">ID卡號碼</th> {# 新增欄位 #}
+                            <th data-label="學生證號碼">學生證號碼</th> {# 新增欄位 #}
+                            <th data-label="總遲到次數">總遲到次數</th> {# 新增統計數據 #}
+                            <th data-label="總欠交功課次數">總欠交功課次數</th> {# 新增統計數據 #}
+                            <th data-label="總違規點數">總違規點數</th> {# 新增統計數據 #}
+                            <th data-label="總獎勵點數">總獎勵點數</th> {# 新增統計數據 #}
+                            <th data-label="操作">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {# Loop through the list of students passed from the backend #}
+                        {% for student in students %}
+                            <tr>
+                                <td data-label="班級名稱">{{ student.class_name }}</td>
+                                <td data-label="學號">{{ student.student_number if student.student_number else 'N/A' }}</td>
+                                <td data-label="姓名">{{ student.name }}</td>
+                                <td data-label="ID卡號碼">{{ student.id_card_number if student.id_card_number else 'N/A' }}</td> {# 顯示 ID 卡號碼 #}
+                                <td data-label="學生證號碼">{{ student.student_id_number if student.student_id_number else 'N/A' }}</td> {# 顯示學生證號碼 #}
+                                {# 顯示學生統計數據 - 這些數據需要從後端獲取並添加到 student 對象中 #}
+                                <td data-label="總遲到次數">{{ student.late_count if student.late_count is not none else 0 }}</td> {# 顯示總遲到次數 #}
+                                <td data-label="總欠交功課次數">{{ student.incomplete_homework_count if student.incomplete_homework_count is not none else 0 }}</td> {# 顯示總欠交功課次數 #}
+                                <td data-label="總違規點數">{{ student.violation_points if student.violation_points is not none else 0 }}</td> {# 顯示總違規點數 #}
+                                <td data-label="總獎勵點數">{{ student.award_points if student.award_points is not none else 0 }}</td> {# 顯示總獎勵點數 #}
+
+                                <td data-label="操作" class="flex flex-wrap gap-2"> {# 操作按鈕欄位，使用 flex 佈局和間距 #}
+                                    {# 查看記錄按鈕 - 所有登入使用者都可查看 #}
+                                    {# 在管理員介面，直接鏈接到查看記錄頁面更合理 #}
+                                    <a href="{{ url_for('main.view_records', student_id=student.student_id) }}" class="btn btn-secondary btn-sm">
+                                        查看記錄
+                                    </a>
+                                    {# 修改學生按鈕 - 僅管理員可見 #}
+                                     {% if current_user.is_admin() %}
+                                        <a href="{{ url_for('admin.edit_student', student_id=student.student_id) }}" class="btn btn-secondary btn-sm">
+                                            修改
+                                        </a>
+                                     {% endif %}
+                                     {# 刪除學生按鈕 - 僅管理員可見 #}
+                                     {% if current_user.is_admin() %}
+                                         {# 使用一個包含刪除按鈕的小表單，以便使用 POST 方法刪除 #}
+                                         <form action="{{ url_for('admin.delete_student', student_id=student.student_id) }}" method="POST" class="inline-block" onsubmit="return confirm('您確定要刪除學生 {{ student.name }} 的資料及所有相關記錄嗎？');">
+                                             <button type="submit" class="btn btn-danger btn-sm">
+                                                 刪除
+                                             </button>
+                                         </form>
+                                     {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %} {# 結束學生循環 #}
+                    </tbody>
+                </table>
+            </div>
+        {% else %} {# 如果學生列表為空 #}
+            {# 顯示沒有學生資料的提示訊息 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p>目前沒有學生資料。</p>
+            </div>
+        {% endif %} {# 結束條件判斷 #}
+
+        {# 返回管理員儀表板按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回管理員儀表板路由 #}
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">返回管理員儀表板</a>
+        </div>
+    </div>
+{% endblock %}

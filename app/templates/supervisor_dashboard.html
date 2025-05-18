@@ -1,0 +1,97 @@
+{% extends 'layout.html' %}
+
+{% block title %}主管儀表板{% endblock %} {# 設定頁面標題 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">主管儀表板</h1> {# 頁面主標題 #}
+
+        {# 顯示主管歡迎訊息 #}
+        <div class="mb-6 text-center text-gray-700">
+            {# 假設 current_user 對象有 username 和 teacher_name 屬性 #}
+            {# 主管可能沒有 teacher_name，使用 username 作為備用 #}
+            <p>歡迎，主管 <strong>{{ current_user.teacher_name if current_user.teacher_name else current_user.username }}</strong>！</p>
+            <p>作為主管，您可以查看和管理所有學生的記錄。</p>
+        </div>
+
+        {# 功能連結網格佈局 #}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {# 查看所有學生記錄連結 #}
+            {# 假設主管可以訪問 admin.manage_students 路由，或者您將創建一個專門的主管路由 #}
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">管理學生記錄</h2>
+                <p class="mb-4">查看所有學生的詳細資料和記錄。</p>
+                {# TODO: 如果有專門的主管查看所有學生路由，請替換這裡 #}
+                <a href="{{ url_for('admin.manage_students') }}" class="text-blue-700 hover:text-blue-800 font-bold">
+                    前往學生管理頁面 &rarr;
+                </a>
+            </div>
+
+            {# 查看所有缺席記錄連結 #}
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看缺席記錄</h2>
+                <p class="mb-4">瀏覽和篩選所有學生的缺席記錄。</p>
+                {# TODO: 創建一個路由，例如 'main.view_all_absences'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_absences')}}" class="text-green-700 hover:text-green-800 font-bold">
+                    前往缺席記錄頁面 &rarr;
+                </a>
+            </div>
+
+            {# 查看所有獎懲記錄連結 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看獎懲記錄</h2>
+                <p class="mb-4">瀏覽和篩選所有學生的獎勵和懲罰記錄。</p>
+                {# TODO: 創建一個路由，例如 'main.view_all_awards_punishments'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_awards_punishments')}}" class="text-yellow-700 hover:text-yellow-800 font-bold">
+                    前往獎懲記錄頁面 &rarr;
+                </a>
+            </div>
+
+            {# 查看所有參賽記錄連結 #}
+            <div class="bg-purple-100 border-l-4 border-purple-500 text-purple-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看參賽記錄</h2>
+                <p class="mb-4">瀏覽和篩選所有學生的參賽記錄。</p>
+                {# TODO: 創建一個路由，例如 'main.view_all_competitions'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_competitions')}}" class="text-purple-700 hover:text-purple-800 font-bold">
+                    前往參賽記錄頁面 &rarr;
+                </a>
+            </div>
+
+            {# 查看所有遲到記錄連結 #}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看遲到記錄</h2>
+                <p class="mb-4">瀏覽和篩選所有學生的遲到記錄。</p>
+                 {# TODO: 創建一個路由，例如 'main.view_all_lates'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_lates')}}" class="text-red-700 hover:text-red-800 font-bold">
+                    前往遲到記錄頁面 &rarr;
+                </a>
+            </div>
+
+            {# 查看所有欠交功課記錄連結 #}
+            <div class="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看欠交功課記錄</h2>
+                <p class="mb-4">瀏覽和篩選所有學生的欠交功課記錄。</p>
+                 {# TODO: 創建一個路由，例如 'main.view_all_incomplete_homeworks'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_incomplete_homeworks')}}" class="text-orange-700 hover:text-orange-800 font-bold">
+                    前往欠交功課記錄頁面 &rarr;
+                </a>
+            </div>
+
+             {# 查看所有班級列表連結 #}
+            <div class="bg-teal-100 border-l-4 border-teal-500 text-teal-700 p-4 rounded-md shadow-sm">
+                <h2 class="text-xl font-semibold mb-2">查看所有班級列表</h2>
+                <p class="mb-4">查看系統中所有班級的列表。</p>
+                {# TODO: 創建一個路由，例如 'main.view_all_classes'，並確保主管有權限訪問 #}
+                <a href="{{ url_for('main.view_all_classes')}}" class="text-teal-700 hover:text-teal-800 font-bold">
+                    前往班級列表頁面 &rarr;
+                </a>
+            </div>
+
+
+            {# 您可以根據需要添加更多主管功能連結 #}
+
+        </div>
+    </div>
+    {# 帳戶資訊和修改密碼連結預計在 layout.html 的導航欄中 #}
+{% endblock %}

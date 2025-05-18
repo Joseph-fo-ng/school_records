@@ -1,0 +1,28 @@
+{% extends 'layout.html' %}
+
+{% block title %}儀表板{% endblock %}
+
+{% block content %}
+    <div class="text-center py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">歡迎，{{ current_user.username }}！</h1>
+        <p class="text-lg text-gray-600 mb-6">您的角色是：<strong>{{ current_user.role }}</strong></p>
+
+        <p class="text-md text-gray-700 mb-8">
+            您將被重定向到您的專屬儀表板頁面。
+            如果沒有自動跳轉，請點擊以下鏈接：
+        </p>
+
+        <div class="flex flex-col items-center space-y-4">
+            {% if current_user.is_admin() %}
+                <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-primary">前往管理員面板</a>
+            {% elif current_user.is_supervisor() %}
+                <a href="{{ url_for('main.supervisor_dashboard') }}" class="btn btn-primary">前往主管儀表板</a> {# Assuming a supervisor_dashboard route in main blueprint #}
+            {% elif current_user.is_teacher() %}
+                 {# Assuming teacher_dashboard route in main blueprint and assigned_class is passed #}
+                 {# Note: The teacher_dashboard route in routes.py fetches assigned_class.
+                    This link is a fallback and might need adjustment based on how teacher_dashboard.html is structured. #}
+                 <a href="{{ url_for('main.teacher_dashboard') }}" class="btn btn-primary">前往教師儀表板</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

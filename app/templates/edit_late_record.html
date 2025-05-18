@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+
+{% block title %}修改遲到記錄 - {{ late_record.name }}{% endblock %} {# 設定頁面標題，使用學生的名字 #}
+
+{% block content %}
+    <div class="form-container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">修改 {{ late_record.name }} 的遲到記錄</h1> {# 頁面主標題，顯示學生的名字 #}
+
+        <div class="mb-6 text-center text-gray-700">
+            {% if late_record %} {# 檢查記錄資料是否存在，假設 late_record 物件包含了學生資訊 #}
+                <p>學生姓名: <strong>{{ late_record.name }}</strong></p> {# 假設 late_record 物件中包含 name #}
+                <p>班級: <strong>{{ late_record.class_name if late_record.class_name else 'N/A' }}</strong></p> {# 假設 late_record 物件中包含 class_name #}
+                {% if late_record.student_number %} {# 如果有學號則顯示，假設 late_record 物件中包含 student_number #}
+                    <p>學號: <strong>{{ late_record.student_number }}</strong></p>
+                {% endif %}
+            {% else %} {# 如果找不到記錄資料則顯示錯誤訊息 #}
+                <p class="text-red-500">無法載入記錄資訊。</p>
+            {% endif %}
+        </div>
+
+        {# 修改遲到記錄表單 #}
+        <form method="POST"> {# 表單提交方法為 POST #}
+            {{ form.hidden_tag() }} {# 包含 Flask-WTF 自動生成的 CSRF token，用於安全防護 #}
+
+            {# 遲到日期欄位 #}
+            <div class="form-group mb-4">
+                {{ form.late_date.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染欄位標籤 #}
+                {# 設定預設值為現有記錄的日期 #}
+                {{ form.late_date(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", value=form.late_date.data if form.late_date.data is not none else (late_record.late_date.strftime('%Y-%m-%d') if late_record and late_record.late_date else '')) }}
+                {% for error in form.late_date.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {# 原因/備註欄位 #}
+            <div class="form-group mb-6">
+                {{ form.reason.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染欄位標籤 #}
+                {# 設定預設值為現有記錄的原因 #}
+                {{ form.reason(class="form-input w-full px-3 py-2 border rounded-md text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入原因或備註 (可選)", value=form.reason.data if form.reason.data is not none else (late_record.reason if late_record and late_record.reason else '')) }}
+                {% for error in form.reason.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            {# 提交按鈕 #}
+            <div class="flex items-center justify-between">
+                {{ form.submit(class="btn btn-primary w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="更新記錄") }} {# 渲染提交按鈕，文字為“更新記錄” #}
+            </div>
+        </form>
+
+        {# 返回按鈕 #}
+        <div class="text-center mt-6">
+            {# 鏈接回學生的記錄查看頁面 #}
+            {% if late_record %} {# 確保記錄資料存在才能生成返回鏈接 #}
+                {# 假設 late_record 物件中包含 student_id #}
+                <a href="{{ url_for('main.view_records', student_id=late_record.student_id) }}" class="btn btn-secondary">
+                    返回 {{ late_record.name }} 的記錄
+                </a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'layout.html' %}
+
+{% block title %}{{ class_name }} 學生列表{% endblock %} {# 設定頁面標題，使用班級名稱 #}
+
+{% block content %}
+    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-center mb-6">{{ class_name }} 學生列表</h1> {# 頁面主標題，顯示班級名稱 #}
+
+        {# Action Buttons: CSV Export and Back Button #}
+        <div class="mb-6 flex flex-wrap justify-center md:justify-between items-center gap-4">
+            {# CSV Export Button - Visible to Admin and Supervisor #}
+            {% if current_user.is_admin() or current_user.is_supervisor() %}
+                 <a href="{{ url_for('main.export_student_list_csv', class_id=class_id) }}" class="btn btn-primary inline-block">
+                     匯出此班級學生數據 (CSV)
+                 </a>
+            {% endif %}
+
+             {# Back Button - Adjusts based on user role #}
+             {% if current_user.is_teacher() %}
+                  {# Teachers go back to their dashboard #}
+                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                     返回教師儀表板
+                 </a>
+             {% elif current_user.is_supervisor() %}
+                 {# Supervisors go back to their dashboard #}
+                  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                     返回主管儀表板
+                 </a>
+             {% elif current_user.is_admin() %}
+                  {# Admins go back to student management (or admin dashboard) #}
+                   <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary inline-block">
+                      返回學生管理
+                  </a>
+             {% else %}
+                  {# Fallback for unexpected roles #}
+                  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                      返回儀表板
+                  </a>
+             {% endif %}
+
+        </div>
+
+
+        {% if students %} {# 檢查學生列表是否為空 #}
+            <div class="table-container"> {# 添加一個 div 容器以應用滾動條 #}
+                <table class="data-table"> {# 數據表格，方便響應式顯示 #}
+                    <thead>
+                        <tr>
+                            <th data-label="學號">學號</th>
+                            <th data-label="姓名">姓名</th>
+                             <th data-label="ID卡號碼">ID卡號碼</th> {# 新增欄位 #}
+                             <th data-label="學生證號碼">學生證號碼</th> {# 新增欄位 #}
+                             <th data-label="總遲到次數">總遲到次數</th> {# 新增統計數據 #}
+                             <th data-label="總欠交功課次數">總欠交功課次數</th> {# 新增統計數據 #}
+                             <th data-label="總違規點數">總違規點數</th> {# 新增統計數據 #}
+                             <th data-label="總獎勵點數">總獎勵點數</th> {# 新增統計數據 #}
+                            <th data-label="操作">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %} {# 循環顯示每個學生 #}
+                            <tr>
+                                <td data-label="學號">{{ student.student_number if student.student_number else 'N/A' }}</td>
+                                <td data-label="姓名">{{ student.name }}</td>
+                                <td data-label="ID卡號碼">{{ student.id_card_number if student.id_card_number else 'N/A' }}</td> {# 顯示 ID 卡號碼 #}
+                                <td data-label="學生證號碼">{{ student.student_id_number if student.student_id_number else 'N/A' }}</td> {# 顯示學生證號碼 #}
+                                <td data-label="總遲到次數">{{ student.late_count if student.late_count is not none else 0 }}</td> {# 顯示總遲到次數 #}
+                                <td data-label="總欠交功課次數">{{ student.incomplete_homework_count if student.incomplete_homework_count is not none else 0 }}</td> {# 顯示總欠交功課次數 #}
+                                <td data-label="總違規點數">{{ student.violation_points if student.violation_points is not none else 0 }}</td> {# 顯示總違規點數 #}
+                                <td data-label="總獎勵點數">{{ student.award_points if student.award_points is not none else 0 }}</td> {# 顯示總獎勵點數 #}
+
+                                <td data-label="操作" class="action-buttons"> {# 操作按鈕欄位 #}
+                                    {# 查看記錄按鈕 - 所有登入使用者都可查看 #}
+                                    <a href="{{ url_for('main.view_records', student_id=student.student_id) }}" class="btn btn-secondary btn-sm">
+                                        查看記錄
+                                    </a>
+                                    {# 修改按鈕 - 僅管理員可見 #}
+                                     {% if current_user.is_admin() %}
+                                        <a href="{{ url_for('admin.edit_student', student_id=student.student_id) }}" class="btn btn-secondary btn-sm">
+                                            修改
+                                        </a>
+                                     {% endif %}
+                                     {# 刪除按鈕 - 僅管理員可見 #}
+                                     {% if current_user.is_admin() %}
+                                         {# 使用一個包含刪除按鈕的小表單，以便使用 POST 方法刪除 #}
+                                         <form action="{{ url_for('admin.delete_student', student_id=student.student_id) }}" method="POST" class="inline-block" onsubmit="return confirm('您確定要刪除學生 {{ student.name }} 的資料及所有相關記錄嗎？');">
+                                             <button type="submit" class="btn btn-danger btn-sm">
+                                                 刪除
+                                             </button>
+                                         </form>
+                                     {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %} {# 結束學生循環 #}
+                    </tbody>
+                </table>
+            </div>
+        {% else %} {# 如果學生列表為空 #}
+             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p>該班級目前沒有學生資料。</p>
+            </div>
+        {% endif %} {# 結束條件判斷 #}
+
+
+         {# 重新添加返回按鈕在底部，提供一致性 #}
+         <div class="text-center mt-6">
+             {% if current_user.is_teacher() %}
+                  {# Teachers go back to their dashboard #}
+                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                     返回教師儀表板
+                 </a>
+             {% elif current_user.is_supervisor() %}
+                 {# Supervisors go back to their dashboard #}
+                  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                     返回主管儀表板
+                 </a>
+             {% elif current_user.is_admin() %}
+                  {# Admins go back to student management (or admin dashboard) #}
+                   <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary inline-block">
+                      返回學生管理
+                  </a>
+             {% else %}
+                  {# Fallback for unexpected roles #}
+                  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary inline-block">
+                      返回儀表板
+                  </a>
+             {% endif %}
+         </div>
+
+    </div>
+{% endblock %}
