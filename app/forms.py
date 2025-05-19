@@ -125,7 +125,7 @@ class EditUserForm(FlaskForm):
     """修改使用者表單"""
     # Include username field for display, but validation handled separately in route
     username = StringField('使用者名稱', validators=[DataRequired(), Length(min=2, max=50)]) # Keep for rendering, but validation handled in backend
-    role = SelectField('角色', choices=[('admin', '主管'), ('supervisor', '主管'), ('teacher', '教師')], validators=[DataRequired()]) # Corrected supervisor label? No, schema says supervisor. Let's keep it as is.
+    role = SelectField('角色', choices=[('admin', '管理員'), ('supervisor', '主管'), ('teacher', '教師')], validators=[DataRequired()]) # Corrected supervisor label? No, schema says supervisor. Let's keep it as is.
     teacher_name = StringField('教師姓名 (如果角色是教師)', validators=[Optional(), Length(max=100)])
     id_card_number = StringField('ID 卡號碼 (可選)', validators=[Optional(), Length(max=50)])
 
