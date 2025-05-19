@@ -177,120 +177,195 @@ def add_user():
 @login_required
 @admin_required
 def edit_user(user_id):
-    """修改使用者帳號"""
+    """
+    編輯使用者。管理員專用。
+    """
     conn = get_db()
     user_data = None
-    classes = [] # 用於儲存所有班級列表
-    assigned_class_ids = [] # 用於儲存該使用者已分配的班級 ID
+    classes = []
+    assigned_class_ids = []
+    form = EditUserForm() # Create form instance here
 
     if conn:
         cursor = conn.cursor(dictionary=True)
         try:
-            # 獲取要修改的使用者資訊
-            cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+            # Fetch the existing user data
+            cursor.execute("SELECT user_id, username, role, teacher_name, id_card_number FROM users WHERE user_id = %s", (user_id,))
             user_data = cursor.fetchone()
 
             if not user_data:
                 flash('找不到該使用者', 'danger')
-                if conn and conn.is_connected():
-                     cursor.close()
-                     conn.close()
+                if conn.is_connected(): cursor.close(); conn.close()
                 return redirect(url_for('admin.manage_users'))
 
-            # 獲取所有班級列表供分配
+            # Fetch all classes for the assigned classes checkbox list
             cursor.execute("SELECT class_id, class_name FROM classes ORDER BY class_name")
-            classes = cursor.fetchall()
+            classes_data = cursor.fetchall()
+            classes = classes_data # Pass as 'classes' to template
 
-            # 獲取該使用者已分配的班級 ID
-            cursor.execute("SELECT class_id FROM teacher_classes WHERE user_id = %s", (user_id,))
-            assigned_class_ids = [row['class_id'] for row in cursor.fetchall()] # 從字典中提取 class_id
+
+            if request.method == 'GET':
+                # On GET, populate the form with existing user data
+                form.username.data = user_data['username'] # Populate username (will be read-only)
+                form.role.data = user_data['role']
+                form.teacher_name.data = user_data.get('teacher_name') # Use .get for optional fields
+                form.id_card_number.data = user_data.get('id_card_number') # Use .get for optional fields
+
+                # Fetch currently assigned classes for this user
+                # This is needed to check the correct checkboxes in the template
+                cursor.execute("SELECT class_id FROM teacher_classes WHERE user_id = %s", (user_id,))
+                assigned_classes_data = cursor.fetchall()
+                assigned_class_ids = [item['class_id'] for item in assigned_classes_data] # Pass list of IDs to template
+
+            elif request.method == 'POST':
+                # On POST, process the submitted form data
+                # Note: form.validate_on_submit() will run validators including the custom password validator
+                if form.validate_on_submit():
+                    try:
+                        # Use a non-dictionary cursor for UPDATE/DELETE/INSERT
+                        cursor_non_dict = conn.cursor()
+
+                        # Update user's role, teacher_name, id_card_number
+                        # Get data directly from form.data to exclude username (which is read-only)
+                        update_fields = ['role', 'teacher_name', 'id_card_number']
+                        update_query = "UPDATE users SET " + ", ".join([f"{field} = %s" for field in update_fields]) + " WHERE user_id = %s"
+                        update_values = [form.data[field] for field in update_fields]
+                        update_values.append(user_id)
+                        cursor_non_dict.execute(update_query, tuple(update_values))
+
+
+                        # Handle password reset if new password is provided
+                        if form.new_password.data:
+                            new_password_hash = generate_password_hash(form.new_password.data)
+                            cursor_non_dict.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (new_password_hash, user_id))
+
+
+                        # Handle assigned classes if the role is 'teacher'
+                        if form.role.data == 'teacher':
+                            # Get selected class IDs from the request form data
+                            # request.form.getlist('assigned_classes') returns a list of strings
+                            selected_class_ids_str = request.form.getlist('assigned_classes')
+                            selected_class_ids = [int(id) for id in selected_class_ids_str if id.isdigit()] # Convert to int and filter invalid
+
+                            # Delete existing teacher_class assignments for this user
+                            cursor_non_dict.execute("DELETE FROM teacher_classes WHERE user_id = %s", (user_id,))
+
+                            # Insert new teacher_class assignments
+                            if selected_class_ids:
+                                insert_query = "INSERT INTO teacher_classes (user_id, class_id) VALUES (%s, %s)"
+                                insert_values = [(user_id, class_id) for class_id in selected_class_ids]
+                                cursor_non_dict.executemany(insert_query, insert_values)
+
+                        elif form.role.data != 'teacher':
+                             # If the role is changed FROM teacher to something else, delete existing assignments
+                             cursor_non_dict.execute("DELETE FROM teacher_classes WHERE user_id = %s", (user_id,))
+
+
+                        # Commit the transaction
+                        conn.commit()
+
+                        flash('使用者資料已成功更新', 'success')
+                        return redirect(url_for('admin.manage_users')) # Redirect back to manage users page
+
+                    except mysql.connector.Error as err:
+                        conn.rollback()
+                        flash(f"資料庫錯誤: {err}", 'danger')
+                        current_app.logger.error(f"資料庫錯誤 (編輯使用者): {err}")
+                        # Re-fetch classes and assigned_class_ids on DB error before re-rendering template
+                        cursor_dict_on_error = conn.cursor(dictionary=True)
+                        cursor_dict_on_error.execute("SELECT class_id, class_name FROM classes ORDER BY class_name")
+                        classes = cursor_dict_on_error.fetchall()
+                        if user_data: # user_data should be available from the initial fetch
+                            cursor_dict_on_error.execute("SELECT class_id FROM teacher_classes WHERE user_id = %s", (user_id,))
+                            assigned_classes_data_on_error = cursor_dict_on_error.fetchall()
+                            assigned_class_ids = [item['class_id'] for item in assigned_classes_data_on_error]
+                        cursor_dict_on_error.close()
+
+
+                else:
+                     # Form validation failed on POST
+                     # Re-fetch classes and assigned_class_ids on validation failure before re-rendering template
+                     # The form object will retain the submitted data and errors
+                     cursor_dict_on_error = conn.cursor(dictionary=True)
+                     cursor_dict_on_error.execute("SELECT class_id, class_name FROM classes ORDER BY class_name")
+                     classes = cursor_dict_on_error.fetchall()
+                     if user_data: # user_data should be available from the initial fetch
+                         # For validation errors on assigned classes, the form doesn't handle it directly
+                         # The submitted assigned_classes are in request.form.getlist('assigned_classes')
+                         # We can't easily repopulate the checkboxes based on form errors unless we read request.form again.
+                         # However, the template uses assigned_class_ids passed from the backend.
+                         # On validation failure, we need to pass the *previously assigned* class IDs (if GET)
+                         # OR attempt to get the *submitted* class IDs from request.form (if POST failed).
+                         # Let's pass the previously assigned IDs for simplicity on validation failure.
+                         # A more robust solution might involve re-reading request.form.getlist('assigned_classes') here.
+                          cursor_dict_on_error.execute("SELECT class_id FROM teacher_classes WHERE user_id = %s", (user_id,))
+                          assigned_classes_data_on_error = cursor_dict_on_error.fetchall()
+                          assigned_class_ids = [item['class_id'] for item in assigned_classes_data_on_error]
+                     cursor_dict_on_error.close()
 
 
         except mysql.connector.Error as err:
-            flash(f"資料庫錯誤: {err}", 'danger')
-            current_app.logger.error(f"資料庫錯誤 (修改使用者 - 獲取數據): {err}")
-            if conn and conn.is_connected():
+            # Catch database errors during GET or initial POST fetch
+             flash(f"資料庫錯誤: {err}", 'danger')
+             current_app.logger.error(f"資料庫錯誤 (載入編輯使用者資料): {err}")
+             # Redirect to manage users page on initial fetch error
+             if conn and conn.is_connected():
                  cursor.close()
                  conn.close()
-            return redirect(url_for('admin.manage_users')) # 發生錯誤時重定向
+             return redirect(url_for('admin.manage_users'))
 
-    if not user_data:
+        except Exception as e:
+             # Catch other potential unknown errors
+             if request.method == 'POST' and conn: conn.rollback() # Rollback on POST error
+             flash(f"發生未知錯誤: {e}", 'danger')
+             current_app.logger.error(f"未知錯誤 (編輯使用者): {e}")
+             # Re-fetch classes and assigned_class_ids on other errors before re-rendering template
+             if conn and conn.is_connected():
+                 cursor_dict_on_error = conn.cursor(dictionary=True)
+                 cursor_dict_on_error.execute("SELECT class_id, class_name FROM classes ORDER BY class_name")
+                 classes = cursor_dict_on_error.fetchall()
+                 if user_data: # user_data should be available from the initial fetch
+                      cursor_dict_on_error.execute("SELECT class_id FROM teacher_classes WHERE user_id = %s", (user_id,))
+                      assigned_classes_data_on_error = cursor_dict_on_error.fetchall()
+                      assigned_class_ids = [item['class_id'] for item in assigned_classes_data_on_error]
+                 cursor_dict_on_error.close()
+
+
+        finally:
+                # 確保游標在它們被成功創建 (即不是 None) 且連接仍然開啟時被關閉。
+                # 檢查游標變數是否存在於本地作用域 (locals())，並且游標物件本身不是 None。
+                # 注意：CMySQLCursorDict 物件沒有 .connection 屬性，檢查連接狀態應該在 conn 物件上進行。
+                # 這裡只檢查游標是否被創建，如果連接已關閉，游標的 close() 應該能安全處理。
+                if 'cursor' in locals() and cursor is not None:
+                    try:
+                        cursor.close()
+                    except Exception as e: # 捕獲關閉游標時可能發生的任何異常
+                        current_app.logger.error(f"錯誤關閉字典游標 (finally): {e}")
+
+                # 對非字典游標進行同樣的檢查和關閉
+                if 'cursor_non_dict' in locals() and cursor_non_dict is not None:
+                    try:
+                        cursor_non_dict.close()
+                    except Exception as e: # 捕獲關閉游標時可能發生的任何異常
+                        current_app.logger.error(f"錯誤關閉非字典游標 (finally): {e}")
+
+                # 在 except 區塊中創建的 cursor_dict_on_error_fetch 已經在使用後立即關閉，所以 finally 區塊不需要再處理它。
+
+                # 檢查連接是否被成功創建 (即不是 None) 且連接仍然活動，然後關閉它。
+                # 使用 conn.is_connected() 來檢查連接狀態。
+                if conn is not None and conn.is_connected():
+                    try:
+                        conn.close()
+                    except Exception as e: # 捕獲關閉連接時可能發生的任何異常
+                        current_app.logger.error(f"錯誤關閉資料庫連接 (finally): {e}")
+
+    else:
+        # Handle database connection failure
+        flash('無法連接到資料庫', 'danger')
         return redirect(url_for('admin.manage_users'))
 
-    # 初始化表單，並傳入原始數據用於驗證 (例如 ID 卡號碼唯一性檢查)
-    form = EditUserForm(user_id=user_id, original_id_card_number=user_data['id_card_number'])
-
-
-    # 在 GET 請求時用現有數據填充表單
-    if request.method == 'GET':
-         form.role.data = user_data['role']
-         form.teacher_name.data = user_data['teacher_name']
-         form.id_card_number.data = user_data['id_card_number']
-         # 對於 GET 請求，assigned_class_ids 已經從資料庫獲取
-    else: # POST 請求
-         # 如果表單驗證失敗，需要重新從 request.form 獲取已選中的班級 ID
-         if not form.validate_on_submit():
-              assigned_class_ids = [int(id) for id in request.form.getlist('assigned_classes')]
-         # 如果表單驗證成功，assigned_class_ids 將在下面從 request.form 獲取
-
-
-    if form.validate_on_submit():
-        password = form.password.data # 密碼可選，如果提供則更新
-        role = form.role.data
-        teacher_name = form.teacher_name.data if role == 'teacher' else None # 只有教師角色才儲存教師姓名
-        id_card_number = form.id_card_number.data
-
-        # 獲取使用者選擇的班級 ID 列表 (來自 checkbox)
-        # request.form.getlist('assigned_classes') 返回的是字串列表，需要轉換為整數
-        new_assigned_class_ids = [int(id) for id in request.form.getlist('assigned_classes')]
-
-
-        if conn: # 使用上面開啟的連接
-            cursor = conn.cursor()
-            try:
-                # 更新使用者基本資料
-                update_sql = "UPDATE users SET role = %s, teacher_name = %s, id_card_number = %s"
-                update_params = [role, teacher_name, id_card_number]
-
-                if password:
-                    # 如果提供了新密碼，則更新密碼雜湊
-                    hashed_password = generate_password_hash(password)
-                    update_sql += ", password_hash = %s"
-                    update_params.append(hashed_password)
-
-                update_sql += " WHERE user_id = %s"
-                update_params.append(user_id)
-
-                cursor.execute(update_sql, tuple(update_params))
-                # conn.commit() # 先不提交，等待班級關聯處理完畢
-
-                # 處理班級與教師的關聯 (teacher_classes 表)
-                # 1. 刪除現有的關聯
-                cursor.execute("DELETE FROM teacher_classes WHERE user_id = %s", (user_id,))
-                # conn.commit() # 提交刪除
-
-                # 2. 插入新的關聯
-                if role == 'teacher' and new_assigned_class_ids:
-                    user_class_data = [(user_id, class_id) for class_id in new_assigned_class_ids]
-                    cursor.executemany("INSERT INTO teacher_classes (user_id, class_id) VALUES (%s, %s)", user_class_data)
-
-                conn.commit() # 提交所有更改 (使用者資料更新和班級關聯更新)
-                flash(f'使用者 "{user_data["username"]}" 已成功更新', 'success')
-                return redirect(url_for('admin.manage_users'))
-            except mysql.connector.Error as err:
-                conn.rollback() # 發生錯誤時回滾
-                flash(f"資料庫錯誤: {err}", 'danger')
-                current_app.logger.error(f"資料庫錯誤 (編輯使用者 - 更新): {err}")
-            finally:
-                if conn and conn.is_connected():
-                     cursor.close()
-                     conn.close()
-        else:
-            flash('無法連接到資料庫', 'danger')
-
-    # GET 請求或 POST 失敗時渲染表單
-    # 對於 GET 請求，assigned_class_ids 已經從資料庫獲取
-    # 對於 POST 驗證失敗，assigned_class_ids 已經從 request.form 獲取並轉換
+    # Render template on GET or POST validation failure
+    # Ensure user_data is passed, even on POST validation failure, for title/header
     return render_template('admin/edit_user.html', title=f'修改使用者: {user_data["username"]}', user=user_data, form=form, classes=classes, assigned_class_ids=assigned_class_ids)
 
 

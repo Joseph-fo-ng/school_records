@@ -65,7 +65,7 @@
                                 <td class="py-3 px-6 text-center">
                                     <div class="flex item-center justify-center">
                                         {# 修改按鈕 #}
-                                        <a href="{{ url_for('main.edit_competition', competition_id=record.competition_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改">
+                                        <a href="{{ url_for('main.edit_competition', comp_record_id=record.comp_record_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改">
                                             {# 您可以使用一個圖標，例如 Lucide Icons 或 Font Awesome #}
                                             {# 例如： <i class="fas fa-edit"></i> #}
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,7 +73,7 @@
                                             </svg>
                                         </a>
                                         {# 刪除表單 (使用 POST 方法) #}
-                                        <form action="{{ url_for('main.delete_competition', competition_id=record.competition_id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆記錄嗎？');">
+                                        <form action="{{ url_for('main.delete_competition', comp_record_id=record.comp_record_id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆記錄嗎？');">
                                             <button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110" title="刪除">
                                                  {# 您可以使用一個圖標 #}
                                                  {# 例如： <i class="fas fa-trash"></i> #}

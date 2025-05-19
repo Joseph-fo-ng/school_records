@@ -57,7 +57,7 @@
                                     <div class="flex item-center justify-center">
                                         {# Edit button #}
                                         {# 修改按鈕 #}
-                                        <a href="{{ url_for('main.edit_incomplete_homework', homework_id=record.homework_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改">
+                                        <a href="{{ url_for('main.edit_incomplete_homework_record', incomplete_hw_id=record.incomplete_hw_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改">
                                             {# You can use an icon here, e.g., from Lucide Icons or Font Awesome #}
                                             {# For example: <i class="fas fa-edit"></i> #}
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,7 +66,7 @@
                                         </a>
                                         {# Delete form (using POST method) #}
                                         {# 刪除表單 (使用 POST 方法) #}
-                                        <form action="{{ url_for('main.delete_incomplete_homework', homework_id=record.homework_id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆記錄嗎？');">
+                                        <form action="{{ url_for('main.delete_incomplete_homework_record', incomplete_hw_id=record.incomplete_hw_id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆記錄嗎？');">
                                             <button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110" title="刪除">
                                                  {# You can use an icon here #}
                                                  {# For example: <i class="fas fa-trash"></i> #}

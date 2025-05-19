@@ -3,100 +3,101 @@
 {% block title %}所有班級{% endblock %}
 
 {% block content %}
-    <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-        <h1 class="text-2xl font-bold text-center mb-6">所有班級</h1>
+<div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold text-center mb-6">所有班級</h1>
 
-        {# Display flashed messages #}
-        {# 顯示閃現訊息 #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="mb-6">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} p-3 rounded-md mb-2 text-sm">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        {# Check if there are any classes #}
-        {# 檢查是否有班級 #}
-        {% if classes %}
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-md">
+    {# Display flashed messages #}
+    {# 顯示閃現訊息 #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-6">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} p-3 rounded-md mb-2 text-sm">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+{% if classes %} {# 檢查班級列表是否為空 #}
+            <div class="overflow-x-auto"> {# 添加一個 div 容器以應用滾動條 #}
+                <table class="min-w-full bg-white border border-gray-200 rounded-md"> {# 數據表格，方便響應式顯示 #}
                     <thead>
                         <tr class="bg-gray-100 text-left text-gray-600 uppercase text-sm leading-normal">
-                            <th class="py-3 px-6 text-left">班級名稱</th>
-                            <th class="py-3 px-6 text-left">導師</th> {# Teacher column #}
-                            <th class="py-3 px-6 text-center">學生人數</th> {# Number of students column #}
-                            <th class="py-3 px-6 text-center">操作</th> {# Actions column #}
+                            <th data-label="班級名稱" class="py-3 px-6 text-left">班級名稱</th>
+                            <th data-label="導師" class="py-3 px-6 text-left">導師</th> {# Teacher column #}
+                            <th data-label="學生列表" class="py-3 px-6 text-left">學生列表</th> {# View students link column #}
+                            {# 操作欄位表頭 - 僅管理員可見 #}
+                            {% if current_user.is_admin() %}
+                                <th data-label="操作" class="py-3 px-6 text-center">操作</th> {# Operation column header #}
+                            {% endif %}
                         </tr>
                     </thead>
-                    <tbody class="text-gray-600 text-sm font-light">
-                        {# Loop through the classes list passed from Flask #}
-                        {# 遍歷從 Flask 傳來的班級列表 #}
+                    <tbody>
+                        {# Loop through the list of classes passed from the backend #}
                         {% for class_item in classes %}
                             <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                {# Assuming the class_item object (or dictionary) contains class_id, class_name, teacher_name, and student_count #}
-                                {# You will need to JOIN classes and users tables and count students in your Flask route #}
-                                <td class="py-3 px-6 text-left whitespace-nowrap">
-                                     {# Link to view students in this class #}
-                                     {# 連結到查看此班級學生的頁面 #}
-                                    <a href="{{ url_for('main.view_students_in_class', class_id=class_item.class_id) }}" class="text-blue-600 hover:underline">
-                                        {{ class_item.class_name }}
-                                    </a>
+                                <td data-label="班級名稱" class="py-3 px-6 text-left">{{ class_item.class_name }}</td>
+                                {# 導師欄位顯示 (假設 class_item 物件包含 teacher_name 屬性) #}
+                                <td data-label="導師" class="py-3 px-6 text-left">{{ class_item.teacher_name if class_item.teacher_name else 'N/A' }}</td>
+                                {# 查看學生連結 #}
+                                {# 確保使用正確的端點名稱和參數名稱 #}
+                                <td data-label="學生列表" class="py-3 px-6 text-left">
+                                     <a href="{{ url_for('main.student_list', class_id=class_item.class_id) }}" class="text-blue-600 hover:underline">查看學生列表</a>
                                 </td>
-                                <td class="py-3 px-6 text-left">{{ class_item.teacher_name | default('未指定') }}</td> {# Display teacher's name #}
-                                <td class="py-3 px-6 text-center">{{ class_item.student_count | default(0) }}</td> {# Display number of students #}
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex item-center justify-center">
-                                        {# View Students button (optional, as class name is already a link) #}
-                                        {# 查看學生按鈕 (可選，因為班級名稱已是連結) #}
-                                        {# <a href="{{ url_for('main.view_students_in_class', class_id=class_item.class_id) }}" class="w-4 mr-2 transform hover:text-blue-500 hover:scale-110" title="查看學生">
+                                {# 操作欄位 - 僅管理員可見 #}
+                                {% if current_user.is_admin() %}
+                                    <td data-label="操作" class="py-3 px-6 text-center flex flex-wrap gap-2"> {# Operation buttons column, using flex layout #}
+                                        {# 修改班級按鈕 - 僅管理員可見 #}
+                                        {# 鏈接到修改班級路由 - 確保使用正確的端點名稱和參數名稱 (應為 admin 藍圖下的 edit_class) #}
+                                        <a href="{{ url_for('admin.edit_class', class_id=class_item.class_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改班級">
+                                            {# 您可以使用一個圖標 #}
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </a> #}
-
-                                        {# Edit button #}
-                                        {# 修改按鈕 #}
-                                        <a href="{{ url_for('main.edit_class', class_id=class_item.class_id) }}" class="w-4 mr-2 transform hover:text-purple-500 hover:scale-110" title="修改班級">
-                                            {# You can use an icon here #}
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                            </svg>
-                                        </a>
-                                        {# Delete form (using POST method) #}
-                                        {# 刪除表單 (使用 POST 方法) #}
-                                        <form action="{{ url_for('main.delete_class', class_id=class_item.class_id) }}" method="POST" onsubmit="return confirm('確定要刪除這個班級嗎？');">
+                                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5l8.5-8.5z" />
+                                           </svg>
+                                       </a>
+                                        {# 刪除班級按鈕 - 僅管理員可見 #}
+                                        {# 使用一個包含刪除按鈕的小表單，以便使用 POST 方法刪除 #}
+                                        {# 鏈接到刪除班級路由 - 確保使用正確的端點名稱和參數名稱 (應為 admin 藍圖下的 admin.delete_class) #}
+                                        {# WARNING: This form does NOT include a CSRF token #}
+                                        <form action="{{ url_for('admin.delete_class', class_id=class_item.class_id) }}" method="POST" onsubmit="return confirm('確定要刪除班級 {{ class_item.class_name }} 嗎？ 這將同時刪除該班級下的所有學生及相關記錄！');" class="inline-block">
+                                             {# 移除了 {{ form.csrf_token }} #}
                                             <button type="submit" class="w-4 mr-2 transform hover:text-red-500 hover:scale-110" title="刪除班級">
-                                                 {# You can use an icon here #}
+                                                 {# 您可以使用一個圖標 ##}
                                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m14 0H5m2 0V5a2 2 0 012-2h6a2 2 0 012 2v2" />
                                                 </svg>
                                             </button>
                                         </form>
-                                    </div>
-                                </td>
+                                    </td>
+                                {% endif %} {# End if current_user.is_admin() for td #}
                             </tr>
-                        {% endfor %}
+                        {% endfor %} {# 結束班級循環 #}
                     </tbody>
                 </table>
             </div>
-        {% else %}
-            {# Message when no classes are found #}
-            {# 沒有找到班級時顯示的訊息 #}
-            <p class="text-center text-gray-600">目前沒有班級記錄。</p>
-        {% endif %}
+        {% else %} {# 如果班級列表為空 #}
+            {# 顯示沒有班級資料的提示訊息 #}
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                <p>目前沒有班級資料。</p>
+            </div>
+        {% endif %} {# 結束條件判斷 #}
 
-        {# Return button #}
         {# 返回按鈕 #}
         <div class="mt-6 text-center">
-            <a href="{{ url_for('main.dashboard') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                返回儀表板
-            </a>
+            {# Supervisor 和 Admin 返回到 admin.admin_dashboard 或 manage_classes 如果更適合 #}
+             {# 根據你提供的 view_all_classes 路由在 main 藍圖下，並且是 Supervisor 查看，這裡可能返回 Supervisor 儀表板 #}
+             {# 但是 Admin 也有查看班級列表的需求 (例如從 manage_classes 頁面鏈接過來)，所以返回按鈕可能需要根據角色判斷 #}
+             {# 簡單起見，這裡假設 Supervisor 返回 Supervisor 儀表板 #}
+             {% if current_user.is_supervisor() %}
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">返回主管儀表板</a>
+             {% elif current_user.is_admin() %}
+                 {# Admin 可以返回班級管理頁面 admin.manage_classes #}
+                 <a href="{{ url_for('admin.manage_classes') }}" class="btn btn-secondary">返回班級管理</a>
+             {% else %}
+                  {# 其他角色返回 dashboard #}
+                  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">返回儀表板</a>
+             {% endif %}
         </div>
     </div>
 {% endblock %}

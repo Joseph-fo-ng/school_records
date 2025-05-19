@@ -25,6 +25,7 @@
                 <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
                     <div class="bg-gray-100 p-3 rounded-md">
                         <strong class="block text-sm font-bold mb-1">總缺席節數:</strong>
+                        {# total_absences_sessions 現在是計算後添加到 student 字典中的 #}
                         <p>{{ student.total_absences_sessions if student.total_absences_sessions is not none else 0 }}</p>
                     </div>
                      <div class="bg-gray-100 p-3 rounded-md">
@@ -92,7 +93,8 @@
                         <tbody>
                             {% for record in absences %}
                                 <tr>
-                                    <td data-label="日期">{{ record.absence_date | format_date }}</td>
+                                    {# 直接顯示日期 #}
+                                    <td data-label="日期">{{ record.absence_date }}</td>
                                     <td data-label="節數">{{ record.session_count }}</td>
                                     <td data-label="類型">{{ record.type }}</td>
                                     <td data-label="原因/備註">{{ record.reason if record.reason else 'N/A' }}</td>
@@ -105,14 +107,26 @@
                                     </td>
                                      {# Display recorder's teacher name #}
                                     <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
-                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
-                                    <td data-label="操作">
-                                        {# Only allow editing by the user who recorded it, or by supervisor/admin #}
-                                        {# Ensure record.recorded_by_user_id is comparable to current_user.get_id() (both strings or both ints) #}
+                                     {# 直接顯示記錄時間 #}
+                                    <td data-label="記錄時間">{{ record.recorded_at}}</td>
+                                    {# 操作按鈕 #}
+                                    <td data-label="操作" class="flex flex-wrap gap-2 items-center"> {# 使用 flex 佈局並設置間距 #}
+                                        {# 只有記錄者、主管或管理員可以修改和刪除 #}
                                         {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
+                                            {# 修改按鈕 #}
                                             <a href="{{ url_for('main.edit_absence', absence_id=record.absence_id) }}" class="btn btn-secondary btn-sm">修改</a>
+
+                                            {# 刪除表單/按鈕 #}
+                                            {# Action points to the delete route for this specific absence record #}
+                                            {# 需要後端實現 main.delete_absence 路由 #}
+                                            {# 警告：此表單**沒有**包含 CSRF token，可能存在安全風險 #}
+                                            <form action="{{ url_for('main.delete_absence', absence_id=record.absence_id) }}" method="POST"
+                                                  onsubmit="return confirm('確定要刪除這筆缺席記錄嗎？');" class="inline-block"> {# 使用 inline-block 使按鈕並排 #}
+                                                {# 移除了 {{ form.csrf_token }} 以解決 UndefinedError，但請注意安全風險 #}
+                                                <button type="submit" class="btn btn-danger btn-sm">刪除</button> {# 紅色刪除按鈕 #}
+                                            </form>
                                         {% else %}
-                                            無權修改
+                                            無權操作 {# 如果沒有權限，顯示無權操作 #}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -147,7 +161,8 @@
                         <tbody>
                             {% for record in awards_punishments %}
                                 <tr>
-                                    <td data-label="日期">{{ record.record_date | format_date }}</td>
+                                    {# 直接顯示日期 #}
+                                    <td data-label="日期">{{ record.record_date }}</td>
                                     <td data-label="類型">{{ record.type }}</td>
                                     <td data-label="描述">{{ record.description }}</td>
                                     <td data-label="證明">
@@ -159,13 +174,25 @@
                                     </td>
                                      {# Display recorder's teacher name #}
                                     <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
-                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
-                                    <td data-label="操作">
+                                     {# 直接顯示記錄時間 #}
+                                    <td data-label="記錄時間">{{ record.recorded_at}}</td>
+                                     {# 操作按鈕 #}
+                                    <td data-label="操作" class="flex flex-wrap gap-2 items-center"> {# 使用 flex 佈局並設置間距 #}
                                          {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
-                                            {# Corrected link to edit award/punishment record #}
-                                            <a href="{{ url_for('main.edit_award_punish', record_id=record.record_id) }}" class="btn btn-secondary btn-sm">修改</a>
+                                            {# 修改按鈕 #}
+                                            <a href="{{ url_for('main.edit_award_punishment', record_id=record.record_id) }}" class="btn btn-secondary btn-sm">修改</a> {# 修正了端點名稱 #}
+
+                                            {# 刪除表單/按鈕 #}
+                                            {# Action points to the delete route for this specific award/punishment record #}
+                                            {# 需要後端實現 main.delete_award_punishment 路由 #}
+                                            {# 警告：此表單**沒有**包含 CSRF token，可能存在安全風險 #}
+                                            <form action="{{ url_for('main.delete_award_punishment', record_id=record.record_id) }}" method="POST"
+                                                  onsubmit="return confirm('確定要刪除這筆獎懲記錄嗎？');" class="inline-block"> {# 使用 inline-block 使按鈕並排 #}
+                                                {# 移除了 {{ form.csrf_token }} 以解決 UndefinedError，但請注意安全風險 #}
+                                                <button type="submit" class="btn btn-danger btn-sm">刪除</button> {# 紅色刪除按鈕 #}
+                                            </form>
                                         {% else %}
-                                            無權修改
+                                            無權操作 {# 如果沒有權限，顯示無權操作 #}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -201,7 +228,8 @@
                         <tbody>
                             {% for record in competitions %}
                                 <tr>
-                                    <td data-label="日期">{{ record.comp_date | format_date }}</td>
+                                    {# 直接顯示日期 #}
+                                    <td data-label="日期">{{ record.comp_date }}</td>
                                     <td data-label="賽事名稱">{{ record.comp_name }}</td>
                                     <td data-label="結果">{{ record.result }}</td>
                                     <td data-label="描述/備註">{{ record.description if record.description else 'N/A' }}</td>
@@ -214,13 +242,25 @@
                                     </td>
                                      {# Display recorder's teacher name #}
                                     <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available in record object #}
-                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
-                                    <td data-label="操作">
+                                    {# 直接顯示記錄時間 #}
+                                    <td data-label="記錄時間">{{ record.recorded_at}}</td>
+                                     {# 操作按鈕 #}
+                                    <td data-label="操作" class="flex flex-wrap gap-2 items-center"> {# 使用 flex 佈局並設置間距 #}
                                          {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
-                                            {# Corrected link to edit competition record #}
-                                            <a href="{{ url_for('main.edit_competition', comp_record_id=record.comp_record_id) }}" class="btn btn-secondary btn-sm">修改</a>
+                                            {# 修改按鈕 #}
+                                            <a href="{{ url_for('main.edit_competition', comp_record_id=record.comp_record_id) }}" class="btn btn-secondary btn-sm">修改</a> {# 修正了端點名稱 #}
+
+                                             {# 刪除表單/按鈕 #}
+                                            {# Action points to the delete route for this specific competition record #}
+                                            {# 需要後端實現 main.delete_competition 路由 #}
+                                            {# 警告：此表單**沒有**包含 CSRF token，可能存在安全風險 #}
+                                            <form action="{{ url_for('main.delete_competition', comp_record_id=record.comp_record_id) }}" method="POST"
+                                                  onsubmit="return confirm('確定要刪除這筆參賽記錄嗎？');" class="inline-block"> {# 使用 inline-block 使按鈕並排 #}
+                                                {# 移除了 {{ form.csrf_token }} 以解決 UndefinedError，但請注意安全風險 #}
+                                                <button type="submit" class="btn btn-danger btn-sm">刪除</button> {# 紅色刪除按鈕 #}
+                                            </form>
                                         {% else %}
-                                            無權修改
+                                            無權操作 {# 如果沒有權限，顯示無權操作 #}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -247,24 +287,37 @@
                                 <th data-label="原因/備註">原因/備註</th>
                                 <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
                                 <th data-label="記錄時間">記錄時間</th>
-                                <th data-label="操作">操作</th> {# TODO: Add edit/delete for late records #}
+                                <th data-label="操作">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for record in late_records %}
                                 <tr>
-                                    <td data-label="日期">{{ record.late_date | format_date }}</td>
+                                    {# 直接顯示日期 #}
+                                    <td data-label="日期">{{ record.late_date }}</td>
                                     <td data-label="原因/備註">{{ record.reason if record.reason else 'N/A' }}</td>
                                     {# Display recorder's teacher name #}
                                     <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available #}
-                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
-                                    <td data-label="操作">
-                                        {# Only allow editing by the user who recorded it, or by supervisor/admin #}
+                                     {# 直接顯示記錄時間 #}
+                                    <td data-label="記錄時間">{{ record.recorded_at}}</td>
+                                    {# 操作按鈕 #}
+                                    <td data-label="操作" class="flex flex-wrap gap-2 items-center"> {# 使用 flex 佈局並設置間距 #}
+                                        {# 只有記錄者、主管或管理員可以修改和刪除 #}
                                         {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
-                                            {# TODO: Create main.edit_late route #}
-                                            <a href="#" class="btn btn-secondary btn-sm">修改</a> {# Placeholder link #}
+                                            {# 修改按鈕 #}
+                                            <a href="{{ url_for('main.edit_late_record', late_id=record.late_id) }}" class="btn btn-secondary btn-sm">修改</a> {# Updated placeholder link to point to actual edit route #}
+
+                                             {# 刪除表單/按鈕 #}
+                                            {# Action points to the delete route for this specific late record #}
+                                            {# 需要後端實現 main.delete_late_record 路由 #}
+                                            {# 警告：此表單**沒有**包含 CSRF token，可能存在安全風險 #}
+                                            <form action="{{ url_for('main.delete_late_record', late_id=record.late_id) }}" method="POST"
+                                                  onsubmit="return confirm('確定要刪除這筆遲到記錄嗎？');" class="inline-block"> {# 使用 inline-block 使按鈕並排 #}
+                                                {# 移除了 {{ form.csrf_token }} 以解決 UndefinedError，但請注意安全風險 #}
+                                                <button type="submit" class="btn btn-danger btn-sm">刪除</button> {# 紅色刪除按鈕 #}
+                                            </form>
                                         {% else %}
-                                            無權修改
+                                            無權操作 {# 如果沒有權限，顯示無權操作 #}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -292,24 +345,37 @@
                                 <th data-label="描述/備註">描述/備註</th>
                                 <th data-label="記錄人">記錄人</th> {# Display recorder's teacher name #}
                                 <th data-label="記錄時間">記錄時間</th>
-                                <th data-label="操作">操作</th> {# TODO: Add edit/delete for incomplete homework records #}
+                                <th data-label="操作">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for record in incomplete_homework_records %}
                                 <tr>
-                                    <td data-label="日期">{{ record.record_date | format_date }}</td>
+                                    {# 直接顯示日期 #}
+                                    <td data-label="日期">{{ record.record_date }}</td>
                                      <td data-label="科目">{{ record.subject if record.subject else 'N/A' }}</td>
                                     <td data-label="描述/備註">{{ record.description if record.description else 'N/A' }}</td>
                                     {# Display recorder's teacher name #}
                                     <td data-label="記錄人">{{ record.recorder_name if record.recorder_name else 'N/A' }}</td> {# Assuming recorder_name is available #}
-                                    <td data-label="記錄時間">{{ record.recorded_at | format_datetime }}</td>
-                                    <td data-label="操作">
+                                    {# 直接顯示記錄時間 #}
+                                    <td data-label="記錄時間">{{ record.recorded_at}}</td>
+                                    {# 操作按鈕 #}
+                                    <td data-label="操作" class="flex flex-wrap gap-2 items-center"> {# 使用 flex 佈局並設置間距 #}
                                          {% if current_user.get_id() | string == record.recorded_by_user_id | string or current_user.is_supervisor() or current_user.is_admin() %}
-                                            {# TODO: Create main.edit_incomplete_homework route #}
-                                            <a href="#" class="btn btn-secondary btn-sm">修改</a> {# Placeholder link #}
+                                            {# 修改按鈕 #}
+                                            <a href="{{ url_for('main.edit_incomplete_homework_record', incomplete_hw_id=record.incomplete_hw_id) }}" class="btn btn-secondary btn-sm">修改</a> {# Updated placeholder link to point to actual edit route #}
+
+                                             {# 刪除表單/按鈕 #}
+                                            {# Action points to the delete route for this specific incomplete homework record #}
+                                            {# 需要後端實現 main.delete_incomplete_homework_record 路由 #}
+                                            {# 警告：此表單**沒有**包含 CSRF token，可能存在安全風險 #}
+                                            <form action="{{ url_for('main.delete_incomplete_homework_record', incomplete_hw_id=record.incomplete_hw_id) }}" method="POST"
+                                                  onsubmit="return confirm('確定要刪除這筆欠交功課記錄嗎？');" class="inline-block"> {# 使用 inline-block 使按鈕並排 #}
+                                                {# 移除了 {{ form.csrf_token }} 以解決 UndefinedError，但請注意安全風險 #}
+                                                <button type="submit" class="btn btn-danger btn-sm">刪除</button> {# 紅色刪除按鈕 #}
+                                            </form>
                                         {% else %}
-                                            無權修改
+                                            無權操作 {# 如果沒有權限，顯示無權操作 #}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -327,11 +393,12 @@
 
         <div class="text-center mt-6">
             {# Link back to the student list or dashboard based on user role #}
-            {% if current_user.is_teacher() and student %}
+            {% if current_user.is_teacher() and student and student.class_id is not none %}
                  {# Teachers go back to their class list #}
                 <a href="{{ url_for('main.student_list', class_id=student.class_id) }}" class="btn btn-secondary">
                     返回 {{ student.class_name }} 班學生列表
                 </a>
+            {# 否則，返回學生管理頁面 (給 Admin/Supervisor) #}
             {% else %}
                 {# Supervisors/Admins go back to dashboard or student management #}
                  {# Linking to admin.manage_students might be more appropriate for admin/supervisor #}

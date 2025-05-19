@@ -283,87 +283,254 @@ def export_student_list_csv(class_id):
     return response
 
 
-@main_bp.route('/student/<int:student_id>/records')
+@main_bp.route('/students/<int:student_id>/records')
 @login_required
+# @roles_required('admin', 'supervisor', 'teacher') # Assuming this check is done, or is handled by is_accessible_by
 def view_records(student_id):
-    """查看特定學生的所有記錄"""
-    # 檢查使用者是否有權限查看此學生的記錄
-    # 教師只能查看自己班級學生的記錄，主管和管理員可以查看所有學生的記錄
+    """
+    查看單個學生的所有記錄。
+    需要 student_id 參數來確定要查看哪個學生的記錄。
+    用戶需要有 'admin', 'supervisor', 或 'teacher' 角色。
+    老師只能查看其負責班級的學生記錄。
+    """
+    # 檢查權限 - 只有 admin, supervisor, 或負責該班級的老師可以查看
+    conn_check = get_db()
+    if conn_check:
+        cursor_check = conn_check.cursor(dictionary=True)
+        try:
+            # 獲取學生的班級 ID 以便進行權限檢查
+            cursor_check.execute("SELECT class_id FROM students WHERE student_id = %s", (student_id,))
+            student_class_data = cursor_check.fetchone()
+
+            if not student_class_data:
+                flash('找不到該學生', 'danger')
+                # 安全重定向，例如到學生列表或儀表板
+                if conn_check.is_connected(): cursor_check.close(); conn_check.close()
+                if current_user.is_admin() or current_user.is_supervisor():
+                     return redirect(url_for('admin.manage_students'))
+                else: # 老師或其他角色
+                     return redirect(url_for('main.dashboard'))
+
+
+            student_class_id = student_class_data['class_id']
+
+            # 檢查使用者角色和班級權限
+            if current_user.is_teacher():
+                # 如果是老師，檢查他是否負責這個班級
+                cursor_check.execute("""
+                    SELECT COUNT(*) FROM teacher_classes
+                    WHERE user_id = %s AND class_id = %s
+                """, (current_user.get_id(), student_class_id))
+                if cursor_check.fetchone()['COUNT(*)'] == 0:
+                    # 如果不是負責老師，且不是 admin 或 supervisor
+                    if not (current_user.is_admin() or current_user.is_supervisor()):
+                        flash('您沒有權限查看這個學生的記錄。', 'danger')
+                        if conn_check.is_connected(): cursor_check.close(); conn_check.close()
+                        return redirect(url_for('main.dashboard')) # 重定向到老師儀表板或通用儀表板
+
+            # Admin 和 Supervisor 預設有權限，無需額外檢查班級
+
+        except mysql.connector.Error as err:
+             flash(f"權限檢查資料庫錯誤: {err}", 'danger')
+             current_app.logger.error(f"權限檢查資料庫錯誤 (view_records): {err}")
+             if conn_check.is_connected(): cursor_check.close(); conn_check.close()
+             return redirect(url_for('main.dashboard')) # 安全重定向
+        finally:
+            if conn_check and conn_check.is_connected():
+                 cursor_check.close()
+                 conn_check.close()
+
+
+    # 如果權限檢查通過，則繼續獲取並顯示記錄
     conn = get_db()
     student = None
     absences = []
     awards_punishments = []
     competitions = []
-    late_records = [] # 新增：遲到記錄列表
-    incomplete_homework_records = [] # 新增：欠交功課記錄列表
+    late_records = []
+    incomplete_homework_records = []
+    total_absences_sessions = 0 # 初始化總缺席節數
 
     if conn:
         cursor = conn.cursor(dictionary=True)
         try:
-            # 獲取學生資訊
-            cursor.execute("SELECT s.student_id, s.student_number, s.name, c.class_name, c.class_id FROM students s JOIN classes c ON s.class_id = c.class_id WHERE s.student_id = %s", (student_id,))
+            # Fetch student data INCLUDING class_id and counts/points (EXCEPT total_absences_sessions which is calculated)
+            # 修正: 在 SELECT 語句中加入 s.class_id
+            cursor.execute("""
+                SELECT
+                    s.student_id,
+                    s.student_number,
+                    s.name,
+                    s.class_id,          -- 加入 s.class_id
+                    c.class_name,
+                    s.late_count,
+                    s.incomplete_homework_count,
+                    s.violation_points,
+                    s.award_points
+                FROM students s
+                JOIN classes c ON s.class_id = c.class_id
+                WHERE s.student_id = %s
+            """, (student_id,))
             student = cursor.fetchone()
 
-            if student:
-                # 檢查權限
-                has_permission = False
+            if not student:
+                # This case should ideally be caught by the initial check, but good to double check
+                flash('無法載入學生資料', 'danger')
+                if conn.is_connected(): cursor.close(); conn.close()
                 if current_user.is_admin() or current_user.is_supervisor():
-                     has_permission = True
-                elif current_user.is_teacher():
-                     # 檢查教師是否負責此學生所在的班級
-                     # 使用 User 模型中實現的方法
-                     if any(c['class_id'] == student['class_id'] for c in current_user.assigned_classes):
-                          has_permission = True
-
-                if not has_permission:
-                     flash('您無權查看此學生的記錄', 'danger')
-                     if conn and conn.is_connected():
-                          cursor.close()
-                          conn.close()
+                     return redirect(url_for('admin.manage_students'))
+                else:
                      return redirect(url_for('main.dashboard'))
 
-                # 獲取缺席記錄
-                cursor.execute("SELECT * FROM absences WHERE student_id = %s ORDER BY absence_date DESC, recorded_at DESC", (student_id,)) # 添加 recorded_at 排序
-                absences = cursor.fetchall()
 
-                # 獲取獎懲記錄
-                cursor.execute("SELECT * FROM awards_punishments WHERE student_id = %s ORDER BY record_date DESC, recorded_at DESC", (student_id,)) # 添加 recorded_at 排序
-                awards_punishments = cursor.fetchall()
-
-                # 獲取參賽記錄
-                cursor.execute("SELECT * FROM competitions WHERE student_id = %s ORDER BY comp_date DESC, recorded_at DESC", (student_id,)) # 添加 recorded_at 排序
-                competitions = cursor.fetchall()
-
-                # 獲取遲到記錄
-                cursor.execute("SELECT * FROM late_records WHERE student_id = %s ORDER BY late_date DESC, recorded_at DESC", (student_id,)) # 添加 recorded_at 排序
-                late_records = cursor.fetchall()
-
-                # 獲取欠交功課記錄
-                cursor.execute("SELECT * FROM incomplete_homework_records WHERE student_id = %s ORDER BY record_date DESC, recorded_at DESC", (student_id,)) # 添加 recorded_at 排序
-                incomplete_homework_records = cursor.fetchall()
+            # 計算總缺席節數
+            # 新增查詢來計算 absence 表的 session_count 總和
+            cursor.execute("""
+                SELECT SUM(session_count) AS total_absences_sessions
+                FROM absences
+                WHERE student_id = %s
+            """, (student_id,))
+            total_absences_data = cursor.fetchone()
+            # 將計算結果添加到 student 字典中
+            total_absences_sessions = total_absences_data['total_absences_sessions'] if total_absences_data and total_absences_data['total_absences_sessions'] is not None else 0
+            student['total_absences_sessions'] = total_absences_sessions # 將結果添加到 student 字典
 
 
-            else:
-                flash('找不到該學生', 'danger')
-                if conn and conn.is_connected():
-                     cursor.close()
-                     conn.close()
-                return redirect(url_for('main.dashboard'))
+            # Fetch absence records INCLUDING recorder name
+            # 修正: 聯接 users 表，選取 teacher_name 作為 recorder_name
+            cursor.execute("""
+                SELECT
+                    a.absence_id,
+                    a.student_id,
+                    a.absence_date,
+                    a.session_count,
+                    a.type,
+                    a.reason,
+                    a.upload_path,
+                    a.recorded_by_user_id,
+                    a.recorded_at,
+                    u.teacher_name AS recorder_name -- 從 users 表獲取記錄者姓名
+                FROM absences a
+                JOIN users u ON a.recorded_by_user_id = u.user_id
+                WHERE a.student_id = %s
+                ORDER BY a.absence_date DESC, a.recorded_at DESC
+            """, (student_id,))
+            absences = cursor.fetchall()
+
+            # Fetch award/punishment records INCLUDING recorder name
+            # 修正: 聯接 users 表，選取 teacher_name 作為 recorder_name
+            cursor.execute("""
+                SELECT
+                    ap.record_id,
+                    ap.student_id,
+                    ap.record_date,
+                    ap.type,
+                    ap.description,
+                    ap.upload_path,
+                    ap.recorded_by_user_id,
+                    ap.recorded_at,
+                     u.teacher_name AS recorder_name -- 從 users 表獲取記錄者姓名
+                FROM awards_punishments ap
+                JOIN users u ON ap.recorded_by_user_id = u.user_id
+                WHERE ap.student_id = %s
+                ORDER BY ap.record_date DESC, ap.recorded_at DESC
+            """, (student_id,))
+            awards_punishments = cursor.fetchall()
+
+            # Fetch competition records INCLUDING recorder name
+            # 修正: 聯接 users 表，選取 teacher_name 作為 recorder_name
+            cursor.execute("""
+                SELECT
+                    c.comp_record_id,
+                    c.student_id,
+                    c.comp_date,
+                    c.comp_name,
+                    c.result,
+                    c.description,
+                    c.upload_path,
+                    c.recorded_by_user_id,
+                    c.recorded_at,
+                     u.teacher_name AS recorder_name -- 從 users 表獲取記錄者姓名
+                FROM competitions c
+                 JOIN users u ON c.recorded_by_user_id = u.user_id
+                WHERE c.student_id = %s
+                ORDER BY c.comp_date DESC, c.recorded_at DESC
+            """, (student_id,))
+            competitions = cursor.fetchall()
+
+            # Fetch late records INCLUDING recorder name
+             # 修正: 聯接 users 表，選取 teacher_name 作為 recorder_name
+            cursor.execute("""
+                SELECT
+                    lr.late_id,
+                    lr.student_id,
+                    lr.late_date,
+                    lr.reason,
+                    lr.recorded_by_user_id,
+                    lr.recorded_at,
+                     u.teacher_name AS recorder_name -- 從 users 表獲取記錄者姓名
+                FROM late_records lr
+                 JOIN users u ON lr.recorded_by_user_id = u.user_id
+                WHERE lr.student_id = %s
+                ORDER BY lr.late_date DESC, lr.recorded_at DESC
+            """, (student_id,))
+            late_records = cursor.fetchall()
+
+            # Fetch incomplete homework records INCLUDING recorder name
+             # 修正: 聯接 users 表，選取 teacher_name 作為 recorder_name
+            cursor.execute("""
+                SELECT
+                    ihr.incomplete_hw_id,
+                    ihr.student_id,
+                    ihr.record_date,
+                    ihr.subject,
+                    ihr.description,
+                    ihr.recorded_by_user_id,
+                    ihr.recorded_at,
+                     u.teacher_name AS recorder_name -- 從 users 表獲取記錄者姓名
+                FROM incomplete_homework_records ihr
+                JOIN users u ON ihr.recorded_by_user_id = u.user_id
+                WHERE ihr.student_id = %s
+                ORDER BY ihr.record_date DESC, ihr.recorded_at DESC
+            """, (student_id,))
+            incomplete_homework_records = cursor.fetchall()
+
 
         except mysql.connector.Error as err:
             flash(f"資料庫錯誤: {err}", 'danger')
-            current_app.logger.error(f"資料庫錯誤 (查看學生記錄): {err}")
+            current_app.logger.error(f"資料庫錯誤 (view_records - 獲取記錄): {err}")
+            # 如果獲取記錄失敗，仍然嘗試渲染頁面，但記錄列表會是空的
+            # 確保 student 物件存在，即使記錄獲取失敗
+            # 在這個修正中，student 物件在獲取記錄之前就已經獲取了，所以這裡只需要處理記錄獲取失敗的情況
+            # 但如果 student 獲取也失敗了（前面的檢查會處理，但作為 fallback），我們需要重定向
+            if student is None: # 再次檢查 student 是否為 None，作為額外保障
+                 if conn and conn.is_connected(): cursor.close(); conn.close()
+                 if current_user.is_admin() or current_user.is_supervisor():
+                      return redirect(url_for('admin.manage_students'))
+                 else:
+                      return redirect(url_for('main.dashboard'))
+
+
         finally:
             if conn and conn.is_connected():
                  cursor.close()
                  conn.close()
 
-    if not student:
-         return redirect(url_for('main.dashboard')) # 如果找不到學生，重定向
+    else:
+        flash('無法連接到資料庫。', 'danger')
+        # Redirect if cannot connect to DB
+        if current_user.is_admin() or current_user.is_supervisor():
+             return redirect(url_for('admin.manage_students'))
+        else:
+             return redirect(url_for('main.dashboard'))
 
+
+    # 渲染模板並傳遞數據
+    # 確保 student 是一個字典，以便在模板中使用 student["name"] 等
+    # 由於我們使用 dictionary=True 獲取結果，student 應該是字典
     return render_template('view_records.html', title=f'{student["name"]} 的記錄', student=student,
                            absences=absences, awards_punishments=awards_punishments,
-                           competitions=competitions, late_records=late_records, # 傳遞新增的記錄列表
+                           competitions=competitions, late_records=late_records,
                            incomplete_homework_records=incomplete_homework_records)
 
 
@@ -380,7 +547,7 @@ def record_absence(student_id):
     if conn:
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT student_id, name, class_id, class_name FROM students s JOIN classes c ON s.class_id = c.class_id WHERE student_id = %s", (student_id,))
+            cursor.execute("SELECT student_id, name, class_id FROM students WHERE student_id = %s", (student_id,))
             student = cursor.fetchone()
             if student:
                  # 檢查使用者是否有權限為此學生記錄
@@ -494,7 +661,7 @@ def record_award_punish(student_id):
     if conn:
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT student_id, name, class_id, class_name FROM students s JOIN classes c ON s.class_id = c.class_id WHERE student_id = %s", (student_id,))
+            cursor.execute("SELECT student_id, name, class_id FROM students WHERE student_id = %s", (student_id,))
             student = cursor.fetchone()
             if student:
                  # 檢查使用者是否有權限為此學生記錄
@@ -613,7 +780,7 @@ def record_competition(student_id):
     if conn:
         cursor = conn.cursor(dictionary=True)
         try:
-            cursor.execute("SELECT student_id, name, class_id, class_name FROM students s JOIN classes c ON s.class_id = c.class_id WHERE student_id = %s", (student_id,))
+            cursor.execute("SELECT student_id, name, class_id FROM students WHERE student_id = %s", (student_id,))
             student = cursor.fetchone()
             if student:
                  # 檢查使用者是否有權限為此學生記錄
@@ -1483,223 +1650,356 @@ def edit_incomplete_homework_record(incomplete_hw_id):
     return render_template('edit_incomplete_homework_record.html', title=f'修改欠交功課記錄 ({incomplete_homework_record["name"]})', incomplete_homework_record=incomplete_homework_record, form=form)
 
 
-# --- 刪除記錄路由 ---
+# app/main.py 中找到並替換 delete_absence, delete_award_punishment, delete_competition 這三個函數
 
+# 刪除缺席記錄路由
 @main_bp.route('/absence/<int:absence_id>/delete', methods=['POST'])
 @login_required
 def delete_absence(absence_id):
-    """刪除缺席記錄"""
+    """
+    刪除缺席記錄。
+    需要 absence_id 參數來確定要刪除哪筆記錄。
+    只有記錄者本人、主管或管理員可以刪除。
+    通過 POST 請求觸發。
+    """
     conn = get_db()
-    absence = None
-    student_id = None # 儲存學生 ID 以便重定向
+    fetched_student_id = None # 初始化用於重定向的學生 ID
+    recorded_by_user_id = None # 初始化記錄者使用者 ID
+    upload_path = None # 初始化上傳文件路徑
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        # 使用非字典游標進行後續的 DELETE 操作
+        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT absence_id, student_id, upload_path, s.class_id FROM absences a JOIN students s ON a.student_id = s.student_id WHERE absence_id = %s", (absence_id,))
-            absence = cursor.fetchone()
-
-            if absence:
-                 student_id = absence['student_id'] # 儲存學生 ID
-
-                 # 檢查使用者是否有權限刪除此記錄
-                 has_permission = False
-                 if current_user.is_admin() or current_user.is_supervisor():
-                      has_permission = True
-                 elif current_user.is_teacher():
-                      # 使用 User 模型中實現的方法
-                      if any(c['class_id'] == absence['class_id'] for c in current_user.assigned_classes):
-                           has_permission = True
-
-                 if not has_permission:
-                      flash('您無權刪除此記錄', 'danger')
-                      if conn and conn.is_connected():
-                           cursor.close()
-                           conn.close()
-                      return redirect(url_for('main.dashboard'))
-
-                 # 刪除相關文件 (如果存在)
-                 if absence['upload_path']:
-                      file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], absence['upload_path'])
-                      if os.path.exists(file_path):
-                           try:
-                                os.remove(file_path)
-                                flash('相關證明文件已刪除', 'info')
-                           except OSError as e:
-                                flash(f"刪除相關證明文件失敗: {e}", 'danger')
-                                current_app.logger.error(f"刪除相關證明文件失敗: {e}")
+            # 1. 獲取記錄資訊以進行權限檢查、獲取 student_id 和 recorded_by_user_id
+            # 使用字典游標方便通過欄位名訪問數據
+            cursor_dict = conn.cursor(dictionary=True)
+            # 修正 SQL 查詢：明確指定欄位來源
+            cursor_dict.execute("""
+                SELECT a.absence_id, a.student_id, a.upload_path, a.recorded_by_user_id, s.class_id
+                FROM absences a
+                JOIN students s ON a.student_id = s.student_id
+                WHERE a.absence_id = %s
+            """, (absence_id,))
+            absence_record = cursor_dict.fetchone()
+            cursor_dict.close() # 關閉這個臨時的字典游標
 
 
-                 # 刪除資料庫記錄
-                 cursor.execute("DELETE FROM absences WHERE absence_id = %s", (absence_id,))
-                 conn.commit()
-                 flash('缺席記錄已成功刪除', 'success')
-                 # 重定向到原學生的記錄頁面
-                 return redirect(url_for('main.view_records', student_id=student_id))
-
-            else:
+            if not absence_record:
                 flash('找不到該缺席記錄', 'danger')
+                # 如果找不到記錄，學生 ID 未知，重定向到安全頁面
+                return redirect(url_for('main.dashboard'))
+
+            # 從獲取的字典中取得數據
+            fetched_student_id = absence_record['student_id']
+            recorded_by_user_id = absence_record['recorded_by_user_id']
+            upload_path = absence_record['upload_path']
+
+
+            # 2. 檢查權限 (只有記錄者本人、主管或管理員可以刪除)
+            # 將使用者 ID 和記錄者 ID 轉換為字串進行比較，以確保類型一致
+            if not (str(current_user.get_id()) == str(recorded_by_user_id) or current_user.is_supervisor() or current_user.is_admin()):
+                 flash('您沒有權限刪除此記錄。', 'danger')
+                 # 重定向回原學生的記錄頁面
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+
+            # 3. 刪除相關文件 (如果存在且有權限)
+            if upload_path:
+                 file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
+                 if os.path.exists(file_path):
+                     try:
+                         os.remove(file_path)
+                         # 可以選擇性地在這裡閃現文件刪除成功的訊息
+                         # flash('相關證明文件已刪除', 'info')
+                     except OSError as e:
+                         # 記錄文件刪除失敗的錯誤，但不影響資料庫刪除
+                         current_app.logger.error(f"刪除相關證明文件失敗: {e}")
+                         flash(f"刪除相關證明文件失敗: {e}", 'warning') # 使用 warning 表示問題，但不阻止主操作
+
+
+            # 4. 執行資料庫刪除操作 (使用非字典游標)
+            cursor.execute("DELETE FROM absences WHERE absence_id = %s", (absence_id,))
+
+            # TODO: (原註解已移除) 重新計算並更新學生的總缺席節數
+            # 根據 schema.sql，學生表格沒有 total_absences_sessions 欄位。
+            # view_records 頁面會在載入時計算總數。
+            # 因此，這裡不需要更新 students 表格的總缺席節數。
+            # 如果你希望在 students 表中保留這個總數，你需要修改 schema.sql 添加該欄位，並重新創建或遷移資料庫。
+            # 目前的邏輯是刪除記錄並提交。
+
+            # 5. 提交事務
+            conn.commit()
+
+            flash('缺席記錄已成功刪除', 'success')
 
         except mysql.connector.Error as err:
-            conn.rollback()
-            flash(f"資料庫錯誤: {err}", 'danger')
+            conn.rollback() # 如果發生錯誤，回滾所有變更
+            flash(f"資料庫錯誤 (刪除缺席): {err}", 'danger')
             current_app.logger.error(f"資料庫錯誤 (刪除缺席): {err}")
+            # 發生錯誤時，嘗試重定向回學生的記錄頁面或儀表板
+            if fetched_student_id: # 如果學生 ID 已知
+                return redirect(url_for('main.view_records', student_id=fetched_student_id))
+            else:
+                # 如果學生 ID 都沒獲取到，重定向到儀表板
+                return redirect(url_for('main.dashboard'))
+
+        except Exception as e:
+             # 捕獲其他可能的未知錯誤
+             conn.rollback() # 回滾
+             flash(f"刪除缺席時發生未知錯誤: {e}", 'danger')
+             current_app.logger.error(f"未知錯誤 (刪除缺席): {e}")
+             if fetched_student_id:
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+             else:
+                 return redirect(url_for('main.dashboard'))
+
         finally:
+            # 確保關閉游標和連接
             if conn and conn.is_connected():
                  cursor.close()
                  conn.close()
 
-    # 如果找不到記錄或發生錯誤，嘗試重定向到學生記錄頁面 (如果學生 ID 已知)，否則到儀表板
-    if student_id:
-         return redirect(url_for('main.view_records', student_id=student_id))
-    return redirect(url_for('main.dashboard'))
+    else:
+        # 處理資料庫連接失敗的情況
+        flash('無法連接到資料庫', 'danger')
+        return redirect(url_for('main.dashboard')) # 連接失敗則重定向到儀表板
+
+    # 刪除成功後，重定向回學生的記錄頁面
+    # 使用之前獲取的 fetched_student_id
+    return redirect(url_for('main.view_records', student_id=fetched_student_id))
 
 
 # 刪除獎懲記錄路由
 @main_bp.route('/award_punishment/<int:record_id>/delete', methods=['POST'])
 @login_required
 def delete_award_punishment(record_id):
-    """刪除獎懲記錄"""
+    """
+    刪除獎懲記錄，並撤銷對學生點數的影響。
+    需要 record_id 參數來確定要刪除哪筆記錄。
+    只有記錄者本人、主管或管理員可以刪除。
+    通過 POST 請求觸發。
+    """
     conn = get_db()
-    award_punishment = None
-    student_id = None # 儲存學生 ID 以便重定向
+    fetched_student_id = None # 初始化用於重定向的學生 ID
+    recorded_by_user_id = None # 初始化記錄者使用者 ID
+    upload_path = None # 初始化上傳文件路徑
+    record_type = None # 初始化記錄類型
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        # 使用非字典游標進行後續的 UPDATE 和 DELETE 操作
+        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT record_id, student_id, upload_path, type, s.class_id FROM awards_punishments ap JOIN students s ON ap.student_id = s.student_id WHERE record_id = %s", (record_id,))
-            award_punishment = cursor.fetchone()
-
-            if award_punishment:
-                 student_id = award_punishment['student_id'] # 儲存學生 ID
-
-                 # 檢查使用者是否有權限刪除此記錄
-                 has_permission = False
-                 if current_user.is_admin() or current_user.is_supervisor():
-                      has_permission = True
-                 elif current_user.is_teacher():
-                      # 使用 User 模型中實現的方法
-                      if any(c['class_id'] == award_punishment['class_id'] for c in current_user.assigned_classes):
-                           has_permission = True
-
-                 if not has_permission:
-                      flash('您無權刪除此記錄', 'danger')
-                      if conn and conn.is_connected():
-                           cursor.close()
-                           conn.close()
-                      return redirect(url_for('main.dashboard'))
-
-                 # 在刪除記錄前，撤銷對學生點數的影響
-                 record_type = award_punishment['type']
-                 if record_type in ['優點', '小功', '大功']:
-                      points = {'優點': 1, '小功': 3, '大功': 9}.get(record_type, 0)
-                      cursor.execute("UPDATE students SET award_points = award_points - %s WHERE student_id = %s", (points, student_id))
-                      conn.commit()
-                 elif record_type in ['警告', '缺點', '小過', '大過']:
-                      points = {'警告': 0, '缺點': 1, '小過': 3, '大過': 9}.get(record_type, 0)
-                      cursor.execute("UPDATE students SET violation_points = violation_points - %s WHERE student_id = %s", (points, student_id))
-                      conn.commit()
+            # 1. 獲取記錄資訊以進行權限檢查、獲取 student_id、recorded_by_user_id 和記錄類型
+            # 使用字典游標方便通過欄位名訪問數據
+            cursor_dict = conn.cursor(dictionary=True)
+            # 修正 SQL 查詢：明確指定欄位來源並添加 recorded_by_user_id
+            cursor_dict.execute("""
+                SELECT ap.record_id, ap.student_id, ap.upload_path, ap.type, ap.recorded_by_user_id, s.class_id
+                FROM awards_punishments ap
+                JOIN students s ON ap.student_id = s.student_id
+                WHERE ap.record_id = %s
+            """, (record_id,))
+            award_punishment_record = cursor_dict.fetchone()
+            cursor_dict.close() # 關閉這個臨時的字典游標
 
 
-                 # 刪除相關文件 (如果存在)
-                 if award_punishment['upload_path']:
-                      file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], award_punishment['upload_path'])
-                      if os.path.exists(file_path):
-                           try:
-                                os.remove(file_path)
-                                flash('相關證明文件已刪除', 'info')
-                           except OSError as e:
-                                flash(f"刪除相關證明文件失敗: {e}", 'danger')
-                                current_app.logger.error(f"刪除相關證明文件失敗: {e}")
-
-                 # 刪除資料庫記錄
-                 cursor.execute("DELETE FROM awards_punishments WHERE record_id = %s", (record_id,))
-                 conn.commit()
-                 flash('獎懲記錄已成功刪除', 'success')
-                 return redirect(url_for('main.view_records', student_id=student_id))
-
-            else:
+            if not award_punishment_record:
                 flash('找不到該獎懲記錄', 'danger')
+                # 如果找不到記錄，學生 ID 未知，重定向到安全頁面
+                return redirect(url_for('main.dashboard'))
+
+            # 從獲取的字典中取得數據
+            fetched_student_id = award_punishment_record['student_id']
+            recorded_by_user_id = award_punishment_record['recorded_by_user_id']
+            upload_path = award_punishment_record['upload_path']
+            record_type = award_punishment_record['type']
+
+
+            # 2. 檢查權限 (只有記錄者本人、主管或管理員可以刪除)
+            # 將使用者 ID 和記錄者 ID 轉換為字串進行比較，以確保類型一致
+            if not (str(current_user.get_id()) == str(recorded_by_user_id) or current_user.is_supervisor() or current_user.is_admin()):
+                 flash('您沒有權限刪除此記錄。', 'danger')
+                 # 重定向回原學生的記錄頁面
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+
+            # 3. 在刪除記錄前，撤銷對學生點數的影響 (使用非字典游標)
+            # 這裡不需要聯接，點數欄位在 students 表中存在
+            if record_type in ['優點', '小功', '大功']:
+                 points = {'優點': 1, '小功': 3, '大功': 9}.get(record_type, 0)
+                 cursor.execute("UPDATE students SET award_points = award_points - %s WHERE student_id = %s", (points, fetched_student_id))
+            elif record_type in ['警告', '缺點', '小過', '大過']:
+                 points = {'警告': 0, '缺點': 1, '小過': 3, '大過': 9}.get(record_type, 0)
+                 cursor.execute("UPDATE students SET violation_points = violation_points - %s WHERE student_id = %s", (points, fetched_student_id))
+
+            # 4. 刪除相關文件 (如果存在且有權限)
+            if upload_path:
+                 file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
+                 if os.path.exists(file_path):
+                     try:
+                         os.remove(file_path)
+                         # 可以選擇性地在這裡閃現文件刪除成功的訊息
+                         # flash('相關證明文件已刪除', 'info')
+                     except OSError as e:
+                         # 記錄文件刪除失敗的錯誤，但不影響資料庫刪除
+                         current_app.logger.error(f"刪除相關證明文件失敗: {e}")
+                         flash(f"刪除相關證明文件失敗: {e}", 'warning') # 使用 warning 表示問題，但不阻止主操作
+
+
+            # 5. 刪除資料庫記錄 (使用非字典游標)
+            cursor.execute("DELETE FROM awards_punishments WHERE record_id = %s", (record_id,))
+
+            # 6. 提交事務 (所有操作成功後提交一次)
+            conn.commit()
+
+            flash('獎懲記錄已成功刪除', 'success')
 
         except mysql.connector.Error as err:
-            conn.rollback()
-            flash(f"資料庫錯誤: {err}", 'danger')
+            conn.rollback() # 如果發生錯誤，回滾所有變更
+            flash(f"資料庫錯誤 (刪除獎懲): {err}", 'danger')
             current_app.logger.error(f"資料庫錯誤 (刪除獎懲): {err}")
+            # 發生錯誤時，嘗試重定向回學生的記錄頁面或儀表板
+            if fetched_student_id: # 如果學生 ID 已知
+                return redirect(url_for('main.view_records', student_id=fetched_student_id))
+            else:
+                # 如果學生 ID 都沒獲取到，重定向到儀表板
+                return redirect(url_for('main.dashboard'))
+
+        except Exception as e:
+             # 捕獲其他可能的未知錯誤
+             conn.rollback() # 回滾
+             flash(f"刪除獎懲時發生未知錯誤: {e}", 'danger')
+             current_app.logger.error(f"未知錯誤 (刪除獎懲): {e}")
+             if fetched_student_id:
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+             else:
+                 return redirect(url_for('main.dashboard'))
+
         finally:
+            # 確保關閉游標和連接
             if conn and conn.is_connected():
                  cursor.close()
                  conn.close()
 
-    if student_id:
-         return redirect(url_for('main.view_records', student_id=student_id))
-    return redirect(url_for('main.dashboard')) # 如果找不到記錄或發生錯誤，嘗試重定向到學生記錄頁面 (如果學生 ID 已知)，否則到儀表板
+    else:
+        # 處理資料庫連接失敗的情況
+        flash('無法連接到資料庫', 'danger')
+        return redirect(url_for('main.dashboard')) # 連接失敗則重定向到儀表板
+
+    # 刪除成功後，重定向回學生的記錄頁面
+    # 使用之前獲取的 fetched_student_id
+    return redirect(url_for('main.view_records', student_id=fetched_student_id))
+
 
 # 刪除參賽記錄路由
 @main_bp.route('/competition/<int:comp_record_id>/delete', methods=['POST'])
 @login_required
 def delete_competition(comp_record_id):
-    """刪除參賽記錄"""
+    """
+    刪除參賽記錄。
+    需要 comp_record_id 參數來確定要刪除哪筆記錄。
+    只有記錄者本人、主管或管理員可以刪除。
+    通過 POST 請求觸發。
+    """
     conn = get_db()
-    competition = None
-    student_id = None # 儲存學生 ID 以便重定向
+    fetched_student_id = None # 初始化用於重定向的學生 ID
+    recorded_by_user_id = None # 初始化記錄者使用者 ID
+    upload_path = None # 初始化上傳文件路徑
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        # 使用非字典游標進行後續的 DELETE 操作
+        cursor = conn.cursor()
         try:
-            cursor.execute("SELECT comp_record_id, student_id, upload_path, s.class_id FROM competitions c JOIN students s ON c.student_id = s.student_id WHERE comp_record_id = %s", (comp_record_id,))
-            competition = cursor.fetchone()
+            # 1. 獲取記錄資訊以進行權限檢查、獲取 student_id 和 recorded_by_user_id
+            # 使用字典游標方便通過欄位名訪問數據
+            cursor_dict = conn.cursor(dictionary=True)
+            # 修正 SQL 查詢：明確指定欄位來源並添加 recorded_by_user_id
+            cursor_dict.execute("""
+                SELECT c.comp_record_id, c.student_id, c.upload_path, c.recorded_by_user_id, s.class_id
+                FROM competitions c
+                JOIN students s ON c.student_id = s.student_id
+                WHERE c.comp_record_id = %s
+            """, (comp_record_id,))
+            competition_record = cursor_dict.fetchone()
+            cursor_dict.close() # 關閉這個臨時的字典游標
 
-            if competition:
-                 student_id = competition['student_id'] # 儲存學生 ID
 
-                 # 檢查使用者是否有權限刪除此記錄
-                 has_permission = False
-                 if current_user.is_admin() or current_user.is_supervisor():
-                      has_permission = True
-                 elif current_user.is_teacher():
-                      # 使用 User 模型中實現的方法
-                      if any(c['class_id'] == competition['class_id'] for c in current_user.assigned_classes):
-                           has_permission = True
-
-                 if not has_permission:
-                      flash('您無權刪除此記錄', 'danger')
-                      if conn and conn.is_connected():
-                           cursor.close()
-                           conn.close()
-                      return redirect(url_for('main.dashboard'))
-
-                 # 刪除相關文件 (如果存在)
-                 if competition['upload_path']:
-                      file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], competition['upload_path'])
-                      if os.path.exists(file_path):
-                           try:
-                                os.remove(file_path)
-                                flash('相關證明文件已刪除', 'info')
-                           except OSError as e:
-                                flash(f"刪除相關證明文件失敗: {e}", 'danger')
-                                current_app.logger.error(f"刪除相關證明文件失敗: {e}")
-
-                 # 刪除資料庫記錄
-                 cursor.execute("DELETE FROM competitions WHERE comp_record_id = %s", (comp_record_id,))
-                 conn.commit()
-                 flash('參賽記錄已成功刪除', 'success')
-                 return redirect(url_for('main.view_records', student_id=student_id))
-
-            else:
+            if not competition_record:
                 flash('找不到該參賽記錄', 'danger')
+                # 如果找不到記錄，學生 ID 未知，重定向到安全頁面
+                return redirect(url_for('main.dashboard'))
+
+            # 從獲取的字典中取得數據
+            fetched_student_id = competition_record['student_id']
+            recorded_by_user_id = competition_record['recorded_by_user_id']
+            upload_path = competition_record['upload_path']
+
+
+            # 2. 檢查權限 (只有記錄者本人、主管或管理員可以刪除)
+            # 將使用者 ID 和記錄者 ID 轉換為字串進行比較，以確保類型一致
+            if not (str(current_user.get_id()) == str(recorded_by_user_id) or current_user.is_supervisor() or current_user.is_admin()):
+                 flash('您沒有權限刪除此記錄。', 'danger')
+                 # 重定向回原學生的記錄頁面
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+
+            # 3. 刪除相關文件 (如果存在且有權限)
+            if upload_path:
+                 file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
+                 if os.path.exists(file_path):
+                     try:
+                         os.remove(file_path)
+                         # 可以選擇性地在這裡閃現文件刪除成功的訊息
+                         # flash('相關證明文件已刪除', 'info')
+                     except OSError as e:
+                         # 記錄文件刪除失敗的錯誤，但不影響資料庫刪除
+                         current_app.logger.error(f"刪除相關證明文件失敗: {e}")
+                         flash(f"刪除相關證明文件失敗: {e}", 'warning') # 使用 warning 表示問題，但不阻止主操作
+
+
+            # 4. 執行資料庫刪除操作 (使用非字典游標)
+            cursor.execute("DELETE FROM competitions WHERE comp_record_id = %s", (comp_record_id,))
+
+            # 這裡不需要更新 students 表格中的任何總數欄位
+
+            # 5. 提交事務
+            conn.commit()
+
+            flash('參賽記錄已成功刪除', 'success')
 
         except mysql.connector.Error as err:
-            conn.rollback()
-            flash(f"資料庫錯誤: {err}", 'danger')
+            conn.rollback() # 如果發生錯誤，回滾所有變更
+            flash(f"資料庫錯誤 (刪除參賽): {err}", 'danger')
             current_app.logger.error(f"資料庫錯誤 (刪除參賽): {err}")
+            # 發生錯誤時，嘗試重定向回學生的記錄頁面或儀表板
+            if fetched_student_id: # 如果學生 ID 已知
+                return redirect(url_for('main.view_records', student_id=fetched_student_id))
+            else:
+                # 如果學生 ID 都沒獲取到，重定向到儀表板
+                return redirect(url_for('main.dashboard'))
+
+        except Exception as e:
+             # 捕獲其他可能的未知錯誤
+             conn.rollback() # 回滾
+             flash(f"刪除參賽時發生未知錯誤: {e}", 'danger')
+             current_app.logger.error(f"未知錯誤 (刪除參賽): {e}")
+             if fetched_student_id:
+                 return redirect(url_for('main.view_records', student_id=fetched_student_id))
+             else:
+                 return redirect(url_for('main.dashboard'))
+
         finally:
+            # 確保關閉游標和連接
             if conn and conn.is_connected():
                  cursor.close()
                  conn.close()
 
-    if student_id:
-         return redirect(url_for('main.view_records', student_id=student_id))
-    return redirect(url_for('main.dashboard')) # 如果找不到記錄或發生錯誤，嘗試重定向到學生記錄頁面 (如果學生 ID 已知)，否則到儀表板
+    else:
+        # 處理資料庫連接失敗的情況
+        flash('無法連接到資料庫', 'danger')
+        return redirect(url_for('main.dashboard')) # 連接失敗則重定向到儀表板
+
+    # 刪除成功後，重定向回學生的記錄頁面
+    # 使用之前獲取的 fetched_student_id
+    return redirect(url_for('main.view_records', student_id=fetched_student_id))
 
 # 刪除遲到記錄路由
 @main_bp.route('/late_record/<int:late_id>/delete', methods=['POST'])

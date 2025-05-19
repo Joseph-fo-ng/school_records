@@ -1,13 +1,13 @@
 {% extends 'layout.html' %}
 
-{% block title %}修改使用者 - {{ user.username }}{% endblock %}
+{% block title %}修改使用者 - {{ user.username }}{% endblock %} {# 設定頁面標題，使用使用者名稱 #}
 
 {% block content %}
+    {# 使用與 add_user.html 相同的容器樣式以保持一致性 #}
     <div class="container mx-auto mt-8 p-6 bg-white rounded-lg shadow-md max-w-md">
-        <h1 class="text-2xl font-bold text-center mb-6">修改使用者 - {{ user.username }}</h1>
+        <h1 class="text-2xl font-bold text-center mb-6">修改使用者 - {{ user.username }}</h1> {# 頁面主標題，顯示使用者名稱 #}
 
-        {# Display flashed messages #}
-        {# 顯示閃現訊息 #}
+        {# 顯示閃現訊息 (例如成功或錯誤訊息) #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="mb-6">
@@ -20,67 +20,92 @@
             {% endif %}
         {% endwith %}
 
-        {# User edit form #}
-        {# 修改使用者表單 #}
-        <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
-            {{ form.csrf_token }} {# CSRF protection token #}
+        {# 使用者修改表單 #}
+        {# 確保表單使用 POST 方法，並鏈接到 edit_user 路由，傳遞正確的 user_id 參數 #}
+        {# 注意：這裡假設後端傳來的 user 物件有 user_id 屬性，請根據你的實際後端數據結構調整 #}
+        {# 根據之前的錯誤提示，使用 user.user_id 應該是正確的 #}
+        <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.user_id) }}">
+            {{ form.csrf_token }} {# 包含 Flask-WTF 自動生成的 CSRF token 以增強安全性 #}
 
-            {# Username field (usually not editable or requires special handling) #}
-            {# 使用者名稱欄位 (通常不可修改或需要特殊處理) #}
+            {# 使用者名稱欄位 (顯示，但不可編輯) #}
+            {# 我們在這裡顯示使用者名稱，但不允許直接修改 #}
             <div class="mb-4">
-                {{ form.username.label(class="block text-gray-700 text-sm font-bold mb-2") }}
-                {# Display username as read-only or disabled #}
-                {# 將使用者名稱顯示為唯讀或禁用 #}
-                <input type="text" value="{{ user.username }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100 cursor-not-allowed" readonly disabled>
-                 {# Include a hidden field to ensure username is sent if needed by backend logic #}
-                 {# 包含一個隱藏欄位，以便後端邏輯需要時發送使用者名稱 #}
-                 <input type="hidden" name="username" value="{{ user.username }}">
+                {{ form.username.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染欄位標籤 #}
+                {# 渲染使用者名稱輸入框，設定為 readonly=True 使其不可編輯 #}
+                {# 添加 bg-gray-200 和 cursor-not-allowed 類別來視覺上表示不可編輯狀態 #}
+                {{ form.username(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-200 cursor-not-allowed", readonly=True) }}
+                {% for error in form.username.errors %} {# 顯示驗證錯誤訊息 (如果有的話) #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
             </div>
 
-            {# Role field #}
+            {# 密碼欄位用於強制修改 - 這些欄位應該在你的 EditUserForm 中定義 #}
+            {# 如果填寫了新密碼，後端應該處理密碼的雜湊和更新 #}
+            {# 注意：如果後端沒有對這兩個欄位進行適當的驗證 (例如長度檢查，或確認新密碼與確認欄位一致)，則需要添加 #}
+            {# 在我們之前討論的 forms.py 版本中，EditUserForm 已經包含了 new_password 和 confirm_password #}
+            <div class="mb-4">
+                {{ form.new_password.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染新密碼欄位標籤 #}
+                {{ form.new_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入新密碼 (留空則不修改)") }} {# 渲染新密碼輸入框 #}
+                {% for error in form.new_password.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                {{ form.confirm_password.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染確認新密碼欄位標籤 #}
+                {{ form.confirm_password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請再次輸入新密碼") }} {# 渲染確認新密碼輸入框 #}
+                {% for error in form.confirm_password.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+
             {# 角色欄位 #}
+            {# 這個欄位在你的 EditUserForm 中應該已經存在 #}
             <div class="mb-4">
-                {{ form.role.label(class="block text-gray-700 text-sm font-bold mb-2") }}
-                {{ form.role(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                {% for error in form.role.errors %}
-                    <p class="text-red-500 text-xs italic">{{ error }}</p>
-                {% endfor %}
-            </div>
-
-            {# Teacher Name field (Optional, depending on role) #}
-            {# 教師姓名欄位 (可選，取決於角色) #}
-            <div class="mb-4">
-                {{ form.teacher_name.label(class="block text-gray-700 text-sm font-bold mb-2") }}
-                {{ form.teacher_name(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                {% for error in form.teacher_name.errors %}
-                    <p class="text-red-500 text-xs italic">{{ error }}</p>
-                {% endfor %}
-            </div>
-
-             {# ID Card Number field (Optional) #}
-             {# 身分證字號欄位 (可選) #}
-             <div class="mb-6">
-                 {{ form.id_card_number.label(class="block text-gray-700 text-sm font-bold mb-2") }}
-                 {{ form.id_card_number(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
-                 {% for error in form.id_card_number.errors %}
-                     <p class="text-red-500 text-xs italic">{{ error }}</p>
+                 {{ form.role.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染角色欄位標籤 #}
+                 {# 渲染角色選擇框 #}
+                 {{ form.role(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+                 {% for error in form.role.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
                  {% endfor %}
-             </div>
+            </div>
 
-            {# Class Assignment Section #1}
-            {# 班級指派區塊 #}
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2">指派班級:</label>
-                {% if classes %}
-                    <div class="grid grid-cols-2 gap-2">
-                        {# Loop through the classes list passed from Flask #}
+            {# 教師姓名欄位 - 在角色為教師或主管時顯示 #}
+            {# 這個欄位在你的 EditUserForm 中應該已經存在 #}
+            {# **修正條件：當角色不是教師也不是主管時才隱藏** #}
+            {# 使用 JavaScript 控制顯示/隱藏，需要確保後端傳來的 user 物件包含 'role' 鍵或屬性 #}
+            <div class="mb-4" id="teacher-name-group" {% if not (user.role == 'teacher' or user.role == 'supervisor') %}style="display: none;"{% endif %}>
+                 {{ form.teacher_name.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染教師姓名欄位標籤 #}
+                 {{ form.teacher_name(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入教師姓名") }} {# 渲染教師姓名輸入框 #}
+                 {% for error in form.teacher_name.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                 {% endfor %}
+            </div>
+
+             {# ID 卡號碼欄位 #}
+             {# 這個欄位在你的 EditUserForm 中應該已經存在 #}
+            <div class="mb-4">
+                 {{ form.id_card_number.label(class="block text-gray-700 text-sm font-bold mb-2") }} {# 渲染 ID 卡號碼欄位標籤 #}
+                 {{ form.id_card_number(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline", placeholder="請輸入 ID 卡號碼 (可選)") }} {# 渲染 ID 卡號碼輸入框 #}
+                 {% for error in form.id_card_number.errors %} {# 顯示驗證錯誤訊息 #}
+                    <span class="text-red-500 text-xs italic">{{ error }}</span>
+                 {% endfor %}
+            </div>
+
+            {# 指派班級欄位 (用於教師) - 僅在角色為教師時顯示 #}
+            {# 這部分需要後端傳遞所有班級列表 (classes) 和已指派的班級 ID 列表 (assigned_class_ids) #}
+            {# 使用 JavaScript 控制顯示/隱藏 #}
+            {# **這個欄位仍然只在角色為教師時顯示** #}
+            <div class="mb-6" id="assigned-classes-group" {% if user.role != 'teacher' %}style="display: none;"{% endif %}>
+                <label class="block text-gray-700 text-sm font-bold mb-2">指派班級:</label> {# 渲染指派班級標籤 #}
+                {% if classes %} {# 檢查班級列表是否為空 #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2"> {# 使用網格佈局顯示勾選框 #}
                         {# 遍歷從 Flask 傳來的班級列表 #}
                         {% for class_item in classes %}
                             <div class="flex items-center">
-                                {# Use checkboxes for multiple class selection #}
                                 {# 使用 checkbox 進行多個班級選擇 #}
-                                {# Check if the current class_item.class_id is in the list of assigned_class_ids #}
-                                {# 檢查當前班級的 class_id 是否在已指派的班級 ID 列表裡 #}
+                                {# 檢查當前班級的 class_id 是否在已指派的班級 ID 列表裡，並設置 checked 屬性 #}
                                 <input type="checkbox" name="assigned_classes" value="{{ class_item.class_id }}" id="class_{{ class_item.class_id }}" class="form-checkbox h-4 w-4 text-blue-600 rounded"
                                        {% if class_item.class_id in assigned_class_ids %} checked {% endif %}>
                                 <label for="class_{{ class_item.class_id }}" class="ml-2 text-gray-700">{{ class_item.class_name }}</label>
@@ -88,19 +113,62 @@
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-gray-600 text-sm">目前沒有可用的班級。</p>
+                    <p class="text-gray-600 text-sm">目前沒有可用的班級。</p> {# 如果沒有班級則顯示提示 #}
                 {% endif %}
             </div>
 
 
-            {# Submit and Cancel buttons #}
             {# 提交和取消按鈕 #}
             <div class="flex items-center justify-between">
-                {{ form.submit(class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline") }}
-                <a href="{{ url_for('admin.admin_dashboard') }}" class="inline-block align-baseline font-bold text-sm text-gray-500 hover:text-gray-800">
+                {# 渲染提交按鈕，文字為「更新使用者」 #}
+                {{ form.submit(class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline", value="更新使用者") }}
+                {# 返回按鈕 - 連結到管理使用者頁面 #}
+                <a href="{{ url_for('admin.manage_users') }}" class="inline-block align-baseline font-bold text-sm text-gray-500 hover:text-gray-800">
                     取消
                 </a>
             </div>
         </form>
     </div>
+
+    {# JavaScript 程式碼塊，用於根據選擇的角色顯示/隱藏欄位 #}
+    {# 需要確保在 layout.html 中有 {% block scripts %}{% endblock %} #}
+    {% block scripts %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 獲取角色選擇框的元素，假設它的 ID 是 'role'
+        const roleSelect = document.getElementById('role');
+        // 獲取教師姓名欄位所在的容器元素，假設它的 ID 是 'teacher-name-group'
+        const teacherNameGroup = document.getElementById('teacher-name-group');
+        // 獲取指派班級欄位所在的容器元素，假設它的 ID 是 'assigned-classes-group'
+        const assignedClassesGroup = document.getElementById('assigned-classes-group');
+
+        if (roleSelect) {
+            // 定義一個函式來根據選定的角色顯示或隱藏相關欄位
+            function toggleTeacherFields() {
+                const selectedRole = roleSelect.value;
+
+                // **修正 JavaScript 邏輯：教師姓名欄位在角色為教師或主管時顯示**
+                if (selectedRole === 'teacher' || selectedRole === 'supervisor') {
+                    if (teacherNameGroup) teacherNameGroup.style.display = 'block';
+                } else {
+                    if (teacherNameGroup) teacherNameGroup.style.display = 'none';
+                }
+
+                // 指派班級欄位仍然只在角色為教師時顯示
+                if (selectedRole === 'teacher') {
+                    if (assignedClassesGroup) assignedClassesGroup.style.display = 'block';
+                } else {
+                    if (assignedClassesGroup) assignedClassesGroup.style.display = 'none';
+                }
+            }
+
+            // 初始狀態：頁面載入時根據當前選中的角色設定欄位的顯示狀態
+            toggleTeacherFields();
+
+            // 添加事件監聽器：當角色選擇框的值改變時，重新判斷欄位的顯示狀態
+            roleSelect.addEventListener('change', toggleTeacherFields);
+        }
+    });
+    </script>
+    {% endblock %}
 {% endblock %}

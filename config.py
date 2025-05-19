@@ -15,7 +15,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # 您可以在這裡添加其他設定，例如：
-# DEBUG = True # 開啟或關閉調試模式
+DEBUG = False # 開啟或關閉調試模式
 # MAIL_SERVER = 'smtp.example.com'
 # MAIL_PORT = 587
 # MAIL_USE_TLS = True

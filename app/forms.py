@@ -123,15 +123,27 @@ class AddUserForm(FlaskForm):
 
 class EditUserForm(FlaskForm):
     """修改使用者表單"""
-    # 使用者名稱不允許修改，或需要更嚴格的流程，這裡不包含 username 欄位
-    password = PasswordField('新密碼 (留空則不修改)', validators=[Optional(), Length(min=8)]) # 密碼可選，如果填寫則驗證長度
-    role = SelectField('角色', choices=[('teacher', '教師'), ('supervisor', '主管'), ('admin', '管理員')], validators=[DataRequired()])
-    teacher_name = StringField('教師姓名', validators=[Optional(), Length(max=100)]) # 教師姓名可選
-    id_card_number = StringField('ID卡號碼', validators=[Optional(), Length(max=50)]) # ID卡號碼可選
-    # 使用 FieldList 包含 AssignedClassForm，用於教師分配班級的多選
-    # min_entries=0 允許 FieldList 為空
-    assigned_classes = FieldList(FormField(AssignedClassForm), min_entries=0)
+    # Include username field for display, but validation handled separately in route
+    username = StringField('使用者名稱', validators=[DataRequired(), Length(min=2, max=50)]) # Keep for rendering, but validation handled in backend
+    role = SelectField('角色', choices=[('admin', '主管'), ('supervisor', '主管'), ('teacher', '教師')], validators=[DataRequired()]) # Corrected supervisor label? No, schema says supervisor. Let's keep it as is.
+    teacher_name = StringField('教師姓名 (如果角色是教師)', validators=[Optional(), Length(max=100)])
+    id_card_number = StringField('ID 卡號碼 (可選)', validators=[Optional(), Length(max=50)])
+
+    # Fields for forcing password reset
+    new_password = PasswordField('新密碼 (強制修改)', validators=[Optional(), Length(min=6)])
+    confirm_password = PasswordField('確認新密碼', validators=[EqualTo('new_password', message='密碼不一致')]) # EqualTo validator checks against new_password
+
     submit = SubmitField('更新使用者')
+
+    # Custom validation for password fields
+    def validate_new_password(self, field):
+        if field.data: # If new_password field has data (user intends to change password)
+            if not self.confirm_password.data: # Check if confirm_password is empty
+                raise ValidationError('請確認新密碼') # Require confirm_password
+            # Length validator is already applied
+        elif self.confirm_password.data: # If new_password is empty but confirm_password is not
+             raise ValidationError('請輸入新密碼') # Require new_password if confirm_password has data
+
 
     def __init__(self, *args, **kwargs):
         # 接收原始使用者的 user_id, original_id_card_number 以在驗證時排除當前使用者
